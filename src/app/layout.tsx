@@ -29,9 +29,14 @@ export default function RootLayout({
               <span className="header-logo">⎈</span>
               <span className="header-title">Kepler</span>
             </Link>
-            <p className="header-tagline">
-              Browse Kubernetes Enhancement Proposals
-            </p>
+            <nav className="header-nav">
+              <Link href="/" className="header-nav-link">
+                Browse
+              </Link>
+              <Link href="/stats" className="header-nav-link">
+                Stats
+              </Link>
+            </nav>
             <ThemeToggle />
           </header>
           <main className="app-main">{children}</main>
