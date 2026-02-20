@@ -52,3 +52,11 @@ export function StageBadge({ stage }: { stage?: KepStage }) {
   if (!stage) return null;
   return <Badge text={stage} color={STAGE_COLORS[stage] ?? '#6b7280'} />;
 }
+
+export function StaleBadge() {
+  return (
+    <span className="stale-badge" title="This KEP has not been updated in over a year">
+      ⚠ Stale
+    </span>
+  );
+}

@@ -162,6 +162,47 @@ a:hover { text-decoration: underline; }
 }
 .clear-btn:hover { background: var(--bg); }
 
+.filter-stale-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.filter-stale-checkbox {
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+
+/* Stale badge */
+.stale-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f59e0b22;
+  color: #d97706;
+  border: 1px solid #f59e0b44;
+  letter-spacing: 0.02em;
+}
+[data-theme="dark"] .stale-badge {
+  background: #3b2a0d;
+  color: #fbbf24;
+  border-color: #78491444;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .stale-badge {
+    background: #3b2a0d;
+    color: #fbbf24;
+    border-color: #78491444;
+  }
+}
+
 /* Loading bar */
 .loading-container {
   margin-bottom: 20px;

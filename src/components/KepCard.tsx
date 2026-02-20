@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
-import { StatusBadge, StageBadge } from './Badges';
+import { StatusBadge, StageBadge, StaleBadge } from './Badges';
+import { isStale } from '../utils/kep';
 
 interface KepCardProps {
   kep: Kep;
@@ -11,6 +12,7 @@ interface KepCardProps {
 export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCardProps) {
   const sigDisplay = kep.sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ');
   const titleSlug = kep.slug.replace(/-/g, ' ');
+  const stale = isStale(kep);
 
   return (
     <Link href={`/kep?number=${kep.number}`} className="kep-card">
@@ -20,6 +22,7 @@ export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCard
       <div className="kep-card-badges">
         <StatusBadge status={kep.status} />
         <StageBadge stage={kep.stage} />
+        {stale && <StaleBadge />}
       </div>
       {kep['creation-date'] && (
         <div className="kep-card-date">

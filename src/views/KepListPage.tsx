@@ -8,6 +8,7 @@ import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
+import { isStale } from '../utils/kep';
 
 const PAGE_SIZE = 48;
 
@@ -21,6 +22,7 @@ export function KepListPage() {
     sig: searchParams.get('sig') ?? '',
     status: searchParams.get('status') ?? '',
     stage: searchParams.get('stage') ?? '',
+    stale: searchParams.get('stale') === 'true',
     bookmarked: false,
   });
   const [page, setPage] = useState(() => {
@@ -35,6 +37,7 @@ export function KepListPage() {
     if (filters.sig) params.set('sig', filters.sig);
     if (filters.status) params.set('status', filters.status);
     if (filters.stage) params.set('stage', filters.stage);
+    if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
     router.replace(qs ? `?${qs}` : '/', { scroll: false });
@@ -60,6 +63,7 @@ export function KepListPage() {
       if (filters.sig && kep.sig !== filters.sig) return false;
       if (filters.status && kep.status !== filters.status) return false;
       if (filters.stage && kep.stage !== filters.stage) return false;
+      if (filters.stale && !isStale(kep)) return false;
       if (filters.bookmarked && !isBookmarked(kep.number)) return false;
       return true;
     });
@@ -96,7 +100,7 @@ export function KepListPage() {
         <div className="results-header">
           <span>
             {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-            {(filters.query || filters.sig || filters.status || filters.stage || filters.bookmarked) &&
+            {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) &&
               ` matching filters`}
           </span>
           <div className="view-toggle">
