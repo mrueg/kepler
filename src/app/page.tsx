@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { KepListPage } from '../views/KepListPage';
 
 export default function Home() {
-  return <KepListPage />;
+  return (
+    <Suspense fallback={<div className="list-page" />}>
+      <KepListPage />
+    </Suspense>
+  );
 }
