@@ -6,12 +6,14 @@ export interface Filters {
   status: string;
   stage: string;
   stale: boolean;
+  bookmarked: boolean;
 }
 
 interface SearchAndFilterProps {
   filters: Filters;
   sigs: string[];
   onChange: (filters: Filters) => void;
+  bookmarkCount?: number;
 }
 
 const STATUSES: KepStatus[] = [
@@ -30,6 +32,7 @@ export function SearchAndFilter({
   filters,
   sigs,
   onChange,
+  bookmarkCount = 0,
 }: SearchAndFilterProps) {
   function update(patch: Partial<Filters>) {
     onChange({ ...filters, ...patch });
@@ -99,14 +102,27 @@ export function SearchAndFilter({
           Stale only
         </label>
 
-        {(filters.query || filters.sig || filters.status || filters.stage || filters.stale) && (
+        {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) && (
           <button
             className="clear-btn"
             onClick={() =>
-              onChange({ query: '', sig: '', status: '', stage: '', stale: false })
+              onChange({ query: '', sig: '', status: '', stage: '', stale: false, bookmarked: false })
             }
           >
             Clear
+          </button>
+        )}
+        {(bookmarkCount > 0 || filters.bookmarked) && (
+          <button
+            className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
+            onClick={() => update({ bookmarked: !filters.bookmarked })}
+            aria-pressed={filters.bookmarked}
+            title={filters.bookmarked ? 'Show all KEPs' : 'Show bookmarked KEPs only'}
+          >
+            {filters.bookmarked ? '★' : '☆'} Bookmarks
+            {bookmarkCount > 0 && (
+              <span className="bookmark-filter-count">{bookmarkCount}</span>
+            )}
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
+import { useBookmarks } from '../hooks/useBookmarks';
 import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
@@ -15,12 +16,14 @@ export function KepListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
+  const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
     sig: searchParams.get('sig') ?? '',
     status: searchParams.get('status') ?? '',
     stage: searchParams.get('stage') ?? '',
     stale: searchParams.get('stale') === 'true',
+    bookmarked: false,
   });
   const [page, setPage] = useState(() => {
     const p = parseInt(searchParams.get('page') ?? '1', 10);
@@ -61,9 +64,10 @@ export function KepListPage() {
       if (filters.status && kep.status !== filters.status) return false;
       if (filters.stage && kep.stage !== filters.stage) return false;
       if (filters.stale && !isStale(kep)) return false;
+      if (filters.bookmarked && !isBookmarked(kep.number)) return false;
       return true;
     });
-  }, [keps, filters]);
+  }, [keps, filters, isBookmarked]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -79,7 +83,7 @@ export function KepListPage() {
 
   return (
     <div className="list-page">
-      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} />
+      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
 
       {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
 
@@ -96,7 +100,7 @@ export function KepListPage() {
         <div className="results-header">
           <span>
             {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-            {(filters.query || filters.sig || filters.status || filters.stage || filters.stale) &&
+            {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) &&
               ` matching filters`}
           </span>
           <div className="view-toggle">
@@ -123,11 +127,16 @@ export function KepListPage() {
       {viewMode === 'grid' ? (
         <div className="kep-grid">
           {pageKeps.map((kep) => (
-            <KepCard key={kep.path} kep={kep} />
+            <KepCard
+              key={kep.path}
+              kep={kep}
+              isBookmarked={isBookmarked(kep.number)}
+              onToggleBookmark={toggleBookmark}
+            />
           ))}
         </div>
       ) : (
-        <KepTable keps={pageKeps} />
+        <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
       )}
 
       {totalPages > 1 && (
