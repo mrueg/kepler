@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo, useState } from 'react';
 import { useKeps } from '../hooks/useKeps';
 import { KepCard } from '../components/KepCard';
