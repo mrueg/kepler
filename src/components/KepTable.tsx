@@ -4,9 +4,11 @@ import { StatusBadge } from './Badges';
 
 interface KepTableProps {
   keps: Kep[];
+  isBookmarked?: (number: string) => boolean;
+  onToggleBookmark?: (number: string) => void;
 }
 
-export function KepTable({ keps }: KepTableProps) {
+export function KepTable({ keps, isBookmarked, onToggleBookmark }: KepTableProps) {
   return (
     <div className="kep-table-wrapper">
       <table className="kep-table">
@@ -17,6 +19,9 @@ export function KepTable({ keps }: KepTableProps) {
             <th className="kep-table-th kep-table-th-sig">SIG</th>
             <th className="kep-table-th kep-table-th-status">Status</th>
             <th className="kep-table-th kep-table-th-date">Last Updated</th>
+            {onToggleBookmark && (
+              <th className="kep-table-th kep-table-th-bookmark" aria-label="Bookmark" />
+            )}
           </tr>
         </thead>
         <tbody>
@@ -31,6 +36,7 @@ export function KepTable({ keps }: KepTableProps) {
                   day: 'numeric',
                 })
               : '—';
+            const bookmarked = isBookmarked?.(kep.number) ?? false;
 
             return (
               <tr key={kep.path} className="kep-table-row">
@@ -49,6 +55,19 @@ export function KepTable({ keps }: KepTableProps) {
                   <StatusBadge status={kep.status} />
                 </td>
                 <td className="kep-table-td kep-table-td-date">{dateDisplay}</td>
+                {onToggleBookmark && (
+                  <td className="kep-table-td kep-table-td-bookmark">
+                    <button
+                      className={`bookmark-star${bookmarked ? ' bookmark-star-active' : ''}`}
+                      onClick={() => onToggleBookmark(kep.number)}
+                      aria-label={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                      aria-pressed={bookmarked}
+                      title={bookmarked ? 'Remove bookmark' : 'Bookmark this KEP'}
+                    >
+                      {bookmarked ? '★' : '☆'}
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

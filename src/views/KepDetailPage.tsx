@@ -10,6 +10,7 @@ import type { PRInfo } from '../api/github';
 import { StatusBadge, StageBadge } from '../components/Badges';
 import { GitHubAvatar } from '../components/GitHubAvatar';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
+import { useBookmarks } from '../hooks/useBookmarks';
 
 export function KepDetailPage({ number }: { number: string }) {
   const [kep, setKep] = useState<Kep | null>(null);
@@ -17,6 +18,7 @@ export function KepDetailPage({ number }: { number: string }) {
   const [error, setError] = useState<string | null>(null);
   const [readme, setReadme] = useState<string | null>(null);
   const [prs, setPrs] = useState<PRInfo[]>([]);
+  const { isBookmarked, toggleBookmark } = useBookmarks();
 
   useEffect(() => {
     if (!number) return;
@@ -145,6 +147,15 @@ export function KepDetailPage({ number }: { number: string }) {
         <div className="detail-badges">
           <StatusBadge status={kep.status} />
           <StageBadge stage={kep.stage} />
+          <button
+            className={`bookmark-star bookmark-star-detail${isBookmarked(kep.number) ? ' bookmark-star-active' : ''}`}
+            onClick={() => toggleBookmark(kep.number)}
+            aria-label={isBookmarked(kep.number) ? 'Remove bookmark' : 'Add bookmark'}
+            aria-pressed={isBookmarked(kep.number)}
+            title={isBookmarked(kep.number) ? 'Remove bookmark' : 'Bookmark this KEP'}
+          >
+            {isBookmarked(kep.number) ? '★' : '☆'} {isBookmarked(kep.number) ? 'Bookmarked' : 'Bookmark'}
+          </button>
         </div>
       </div>
 

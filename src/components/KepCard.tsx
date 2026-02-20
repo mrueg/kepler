@@ -4,9 +4,11 @@ import { StatusBadge, StageBadge } from './Badges';
 
 interface KepCardProps {
   kep: Kep;
+  isBookmarked?: boolean;
+  onToggleBookmark?: (number: string) => void;
 }
 
-export function KepCard({ kep }: KepCardProps) {
+export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCardProps) {
   const sigDisplay = kep.sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ');
   const titleSlug = kep.slug.replace(/-/g, ' ');
 
@@ -23,6 +25,21 @@ export function KepCard({ kep }: KepCardProps) {
         <div className="kep-card-date">
           {new Date(kep['creation-date']).getFullYear()}
         </div>
+      )}
+      {onToggleBookmark && (
+        <button
+          className={`bookmark-star${isBookmarked ? ' bookmark-star-active' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleBookmark(kep.number);
+          }}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+          aria-pressed={isBookmarked}
+          title={isBookmarked ? 'Remove bookmark' : 'Bookmark this KEP'}
+        >
+          {isBookmarked ? '★' : '☆'}
+        </button>
       )}
     </Link>
   );
