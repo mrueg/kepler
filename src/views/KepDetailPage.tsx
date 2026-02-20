@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { fetchKepYaml, fetchKepReadme, parseKepPath } from '../api/github';
 import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge } from '../components/Badges';
@@ -279,7 +280,7 @@ export function KepDetailPage({ number }: { number: string }) {
         <div className="detail-readme">
           <h2 className="detail-readme-title">README</h2>
           <div className="detail-readme-body">
-            <Markdown skipHtml>{readme}</Markdown>
+            <Markdown remarkPlugins={[remarkGfm]} skipHtml>{readme}</Markdown>
           </div>
         </div>
       )}
