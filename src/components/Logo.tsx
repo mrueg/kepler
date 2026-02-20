@@ -1,14 +1,14 @@
-export function Logo({ size = 64 }: { size?: number }) {
-  const lensR = 10;
-  const hubR = lensR * 0.22;
-  const spokeInner = lensR * 0.28;
-  const spokeOuter = lensR * 0.82;
-  const dotR = lensR * 0.11;
-  const dotDist = lensR * 0.91;
-  const outerRingR = lensR * 0.93;
+export function Logo({ size = 80 }: { size?: number }) {
+  // K8s wheel geometry — lensR=25 fits fully inside clip circle r=28
+  const lensR = 25;
+  const hubR = lensR * 0.22;       // 5.5
+  const spokeInner = lensR * 0.28; // 7
+  const spokeOuter = lensR * 0.82; // 20.5
+  const dotR = lensR * 0.11;       // 2.75
+  const dotDist = lensR * 0.91;    // 22.75
+  const outerRingR = lensR * 0.93; // 23.25
 
-  // Kubernetes logo: 7 spokes mirrored horizontally (x = −cosθ·r)
-  // so the wheel appears as a reflection through the objective lens
+  // 7 spokes mirrored horizontally (x = −cosθ · r) for lens reflection
   const spokes = Array.from({ length: 7 }, (_, i) => {
     const theta = ((i * 360) / 7 - 90) * (Math.PI / 180);
     return {
@@ -22,87 +22,110 @@ export function Logo({ size = 64 }: { size?: number }) {
   });
 
   return (
-    // ViewBox 130×100 – wider than tall so the horizontal telescope fits
+    // Square viewBox — telescope sits in the upper portion, tripod fills the lower
     <svg
-      width={Math.round(size * 1.3)}
+      width={size}
       height={size}
-      viewBox="0 0 130 100"
+      viewBox="0 0 200 200"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Kepler telescope logo"
     >
       <defs>
-        {/* Cylinder gradient perpendicular to the tube axis */}
-        <linearGradient id="kg-tube" x1="0" y1="-10" x2="0" y2="10" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#7ab0ff" />
-          <stop offset="40%"  stopColor="#2755c8" />
-          <stop offset="100%" stopColor="#091845" />
+        {/* Transparent background — no rect fill */}
+
+        {/* Tube body: grey-beige, light on top, darker on bottom */}
+        <linearGradient id="lg-tube" x1="0" y1="-18" x2="0" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#d4cfc8" />
+          <stop offset="50%"  stopColor="#b0a99e" />
+          <stop offset="100%" stopColor="#7a7168" />
         </linearGradient>
-        <linearGradient id="kg-ring" x1="0" y1="-11" x2="0" y2="11" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#90bfff" />
-          <stop offset="100%" stopColor="#0f1e6a" />
+        {/* Wooden ring: warm orange-brown */}
+        <linearGradient id="lg-ring" x1="0" y1="-20" x2="0" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#e8a050" />
+          <stop offset="45%"  stopColor="#c26a18" />
+          <stop offset="100%" stopColor="#7a3a06" />
         </linearGradient>
-        <linearGradient id="kg-lens-rim" x1="0" y1="-17" x2="0" y2="17" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#3e6cc0" />
-          <stop offset="100%" stopColor="#04091e" />
+        {/* Objective lens rim: dark blue-grey */}
+        <linearGradient id="lg-lens-rim" x1="0" y1="-34" x2="0" y2="34" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#5a6e94" />
+          <stop offset="100%" stopColor="#1a2240" />
         </linearGradient>
-        {/* Clip to the lens inner face – lensR=10 fits fully inside:
-            all spoke dots satisfy (dx/11)²+(dy/14)²<1, no clipping */}
+        {/* Lens face: very dark navy */}
+        <radialGradient id="lg-lens-face" cx="40%" cy="35%" r="70%">
+          <stop offset="0%"   stopColor="#1a2660" />
+          <stop offset="100%" stopColor="#050b20" />
+        </radialGradient>
+        {/* Wooden tripod legs */}
+        <linearGradient id="lg-leg" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+          <stop offset="0%"   stopColor="#c26a18" />
+          <stop offset="50%"  stopColor="#e8a050" />
+          <stop offset="100%" stopColor="#9a4a10" />
+        </linearGradient>
+
+        {/* Clip path: circle matching lens inner face, in telescope-local space */}
         <clipPath id="kg-lens-clip">
-          <ellipse cx="44" cy="0" rx="11" ry="14" />
+          <circle cx="56" cy="0" r="28" />
         </clipPath>
       </defs>
 
-      {/* ── Tripod ── warm brown legs fanning from the mount point */}
-      <line x1="62" y1="56" x2="28" y2="95" stroke="#7a4e28" strokeWidth="3.5" strokeLinecap="round" />
-      <line x1="62" y1="56" x2="96" y2="95" stroke="#7a4e28" strokeWidth="3.5" strokeLinecap="round" />
-      <line x1="62" y1="56" x2="62" y2="94" stroke="#7a4e28" strokeWidth="3"   strokeLinecap="round" />
+      {/* ━━━ Tripod ━━━ warm brown wooden legs */}
+      {/* Left front leg */}
+      <line x1="100" y1="108" x2="44"  y2="188" stroke="#c26a18" strokeWidth="7" strokeLinecap="round" />
+      {/* Right front leg */}
+      <line x1="100" y1="108" x2="156" y2="188" stroke="#c26a18" strokeWidth="7" strokeLinecap="round" />
+      {/* Center back leg */}
+      <line x1="100" y1="108" x2="100" y2="186" stroke="#9a4a10" strokeWidth="6"   strokeLinecap="round" />
       {/* Cross-brace */}
-      <line x1="36" y1="79" x2="88" y2="79" stroke="#7a4e28" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="56"  y1="160" x2="144" y2="160" stroke="#7a3a06" strokeWidth="4"   strokeLinecap="round" />
       {/* Rubber feet */}
-      <circle cx="28" cy="95" r="2.5" fill="#4a2e10" />
-      <circle cx="96" cy="95" r="2.5" fill="#4a2e10" />
-      <circle cx="62" cy="94" r="2"   fill="#4a2e10" />
+      <ellipse cx="44"  cy="188" rx="5" ry="3" fill="#3a1c04" />
+      <ellipse cx="156" cy="188" rx="5" ry="3" fill="#3a1c04" />
+      <ellipse cx="100" cy="186" rx="4" ry="2.5" fill="#3a1c04" />
 
-      {/* ── Telescope ── nearly horizontal, objective lens on the right */}
-      <g transform="translate(62,56) rotate(-12)">
+      {/* Mount head (alt-az head where tube meets tripod) */}
+      <circle cx="100" cy="108" r="9" fill="#c26a18" />
+      <circle cx="100" cy="108" r="5" fill="#e8b060" />
+
+      {/* ━━━ Telescope tube group ━━━ angled ~30° upper-right */}
+      <g transform="translate(100,108) rotate(-30)">
 
         {/* Main tube body */}
-        <rect x="-42" y="-10" width="86" height="20" rx="4" fill="url(#kg-tube)" />
-        {/* Specular highlight strip (3-D cylinder illusion) */}
-        <rect x="-40" y="-10" width="82" height="4" rx="2" fill="rgba(255,255,255,0.14)" />
+        <rect x="-65" y="-18" width="120" height="36" rx="10" fill="url(#lg-tube)" />
 
-        {/* Barrel rings */}
-        <rect x="-30" y="-11" width="6" height="22" rx="2.5" fill="url(#kg-ring)" />
-        <rect x="-16" y="-11" width="6" height="22" rx="2.5" fill="url(#kg-ring)" />
-        <rect x="-2"  y="-11" width="6" height="22" rx="2.5" fill="url(#kg-ring)" />
-        {/* Focus knob on top */}
-        <rect x="-5" y="-16" width="8" height="6" rx="2" fill="url(#kg-ring)" />
+        {/* Wooden barrel rings */}
+        <rect x="-50" y="-20" width="14" height="40" rx="4" fill="url(#lg-ring)" />
+        <rect x="-28" y="-20" width="14" height="40" rx="4" fill="url(#lg-ring)" />
+        <rect x="-6"  y="-20" width="14" height="40" rx="4" fill="url(#lg-ring)" />
+        <rect x="16"  y="-20" width="14" height="40" rx="4" fill="url(#lg-ring)" />
 
-        {/* Eyepiece – left end */}
-        <rect x="-53" y="-7" width="13" height="14" rx="3" fill="url(#kg-ring)" />
-        {/* Elliptical end-cap closes the eyepiece in 3-D */}
-        <ellipse cx="-53" cy="0" rx="3" ry="7" fill="#0a1e5e" />
+        {/* Eyepiece end (left) */}
+        <rect x="-78" y="-10" width="16" height="20" rx="5" fill="url(#lg-ring)" />
+        {/* End-cap */}
+        <ellipse cx="-78" cy="0" rx="4" ry="10" fill="#5a3010" />
 
-        {/* Objective lens housing */}
-        <ellipse cx="44" cy="0" rx="13" ry="16" fill="url(#kg-lens-rim)" />
-        {/* Lens face (dark base for the K8s wheel) */}
-        <ellipse cx="44" cy="0" rx="11" ry="14" fill="#030c22" />
+        {/* ── Objective lens (right) ── */}
+        {/* Outer housing rim */}
+        <circle cx="56" cy="0" r="33" fill="url(#lg-lens-rim)" />
+        {/* Thick wooden ring around lens */}
+        <circle cx="56" cy="0" r="31" fill="none" stroke="url(#lg-ring)" strokeWidth="5" />
+        {/* Lens face */}
+        <circle cx="56" cy="0" r="28" fill="url(#lg-lens-face)" />
 
-        {/* ── Kubernetes wheel (mirrored reflection in the lens) ── */}
+        {/* ── Kubernetes wheel on the lens face ── */}
         <g clipPath="url(#kg-lens-clip)">
-          <g transform="translate(44,0)">
+          <g transform="translate(56,0)">
             {/* Outer ring */}
-            <circle r={outerRingR} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.2" />
-            {/* Central hub */}
+            <circle r={outerRingR} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
+            {/* Hub */}
             <circle r={hubR} fill="white" />
-            {/* 7 spokes + endpoint dots */}
+            {/* 7 spokes + dots */}
             {spokes.map((s, i) => (
               <g key={i}>
                 <line
                   x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
                   stroke="white"
-                  strokeWidth="1.5"
+                  strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <circle cx={s.dx} cy={s.dy} r={dotR} fill="white" />
@@ -111,15 +134,12 @@ export function Logo({ size = 64 }: { size?: number }) {
           </g>
         </g>
 
-        {/* Lens rim stroke */}
-        <ellipse cx="44" cy="0" rx="11" ry="14" fill="none" stroke="#4a80dd" strokeWidth="1.5" />
+        {/* Lens rim border */}
+        <circle cx="56" cy="0" r="28" fill="none" stroke="rgba(100,140,220,0.6)" strokeWidth="2" />
         {/* Glass glint */}
-        <ellipse cx="37" cy="-8" rx="3.5" ry="1.5" fill="rgba(255,255,255,0.32)" transform="rotate(-20,37,-8)" />
+        <ellipse cx="44" cy="-14" rx="7" ry="3" fill="rgba(255,255,255,0.35)" transform="rotate(-20,44,-14)" />
+        <circle  cx="68" cy="-18" r="2.5" fill="rgba(255,255,255,0.25)" />
       </g>
-
-      {/* Mount pivot hub */}
-      <circle cx="62" cy="56" r="5.5" fill="#326ce5" />
-      <circle cx="62" cy="56" r="3"   fill="#6699ff" />
     </svg>
   );
 }
