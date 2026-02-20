@@ -40,7 +40,10 @@ export function KepListPage() {
     if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
-    replace(qs ? `?${qs}` : '/', { scroll: false });
+    const newSearch = qs ? `?${qs}` : '';
+    if (typeof window !== 'undefined' && newSearch !== window.location.search) {
+      replace(newSearch || '/', { scroll: false });
+    }
   }, [filters, page, replace]);
 
   const sigs = useMemo(
