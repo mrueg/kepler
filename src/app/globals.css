@@ -192,6 +192,42 @@ a:hover { text-decoration: underline; }
   color: var(--text-secondary);
   margin-bottom: 16px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.view-toggle-btn {
+  padding: 5px 12px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  line-height: 1.4;
+}
+.view-toggle-btn + .view-toggle-btn {
+  border-left: 1px solid var(--border);
+}
+.view-toggle-btn:hover { background: var(--bg); color: var(--text); }
+.view-toggle-btn-active {
+  background: var(--accent);
+  color: #fff;
+}
+.view-toggle-btn-active:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* KEP Grid */
@@ -257,6 +293,66 @@ a:hover { text-decoration: underline; }
   margin-top: auto;
   padding-top: 4px;
 }
+
+/* KEP Table */
+.kep-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.kep-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+.kep-table-th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.kep-table-th-number { width: 100px; }
+.kep-table-th-title  { min-width: 200px; }
+.kep-table-th-sig    { width: 160px; }
+.kep-table-th-status { width: 130px; }
+.kep-table-th-date   { width: 130px; white-space: nowrap; }
+
+.kep-table-row:not(:last-child) td { border-bottom: 1px solid var(--border); }
+.kep-table-row:hover td { background: var(--bg); }
+
+.kep-table-td {
+  padding: 10px 14px;
+  color: var(--text);
+  vertical-align: middle;
+}
+.kep-table-td-number { white-space: nowrap; }
+.kep-table-td-sig    { color: var(--text-secondary); font-size: 0.82rem; text-transform: capitalize; }
+.kep-table-td-date   { color: var(--text-secondary); white-space: nowrap; font-size: 0.82rem; }
+
+.kep-table-number-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.kep-table-number-link:hover { text-decoration: underline; }
+
+.kep-table-title-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.kep-table-title-link:hover { color: var(--accent); text-decoration: underline; }
 
 /* Pagination */
 .pagination {
