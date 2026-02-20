@@ -476,7 +476,8 @@ a:hover { text-decoration: underline; }
   flex-wrap: wrap;
 }
 .gh-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 4px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -747,6 +748,107 @@ a:hover { text-decoration: underline; }
   transition: background .15s, color .15s;
 }
 .header-nav-link:hover { background: rgba(255,255,255,.1); color: #fff; text-decoration: none; }
+
+/* GitHub Avatar */
+.gh-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+.gh-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+/* PR Status List */
+.pr-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pr-link {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.pr-link:hover { color: var(--accent); text-decoration: underline; }
+.pr-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.pr-title {
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.pr-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pr-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pr-badge-open    { background: #dafbe1; color: #1a7f37; }
+.pr-badge-draft   { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
+.pr-badge-merged  { background: #f3e8ff; color: #7c3aed; }
+.pr-badge-closed  { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
+.pr-ci-success    { background: #dafbe1; color: #1a7f37; }
+.pr-ci-failure    { background: #ffdce0; color: #9a1f29; }
+.pr-ci-pending    { background: #fff8c5; color: #7d4e00; }
+.pr-review-approved  { background: #dafbe1; color: #1a7f37; }
+.pr-review-changes   { background: #ffdce0; color: #9a1f29; }
+.pr-review-pending   { background: #fff8c5; color: #7d4e00; }
+
+[data-theme="dark"] .pr-badge-open    { background: #1a3a25; color: #3fb950; }
+[data-theme="dark"] .pr-badge-merged  { background: #2e1a4a; color: #c084fc; }
+[data-theme="dark"] .pr-ci-success    { background: #1a3a25; color: #3fb950; }
+[data-theme="dark"] .pr-ci-failure    { background: #3a1a1a; color: #f97171; }
+[data-theme="dark"] .pr-ci-pending    { background: #3a2d00; color: #e3b341; }
+[data-theme="dark"] .pr-review-approved  { background: #1a3a25; color: #3fb950; }
+[data-theme="dark"] .pr-review-changes   { background: #3a1a1a; color: #f97171; }
+[data-theme="dark"] .pr-review-pending   { background: #3a2d00; color: #e3b341; }
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .pr-badge-open    { background: #1a3a25; color: #3fb950; }
+  html:not([data-theme="light"]) .pr-badge-merged  { background: #2e1a4a; color: #c084fc; }
+  html:not([data-theme="light"]) .pr-ci-success    { background: #1a3a25; color: #3fb950; }
+  html:not([data-theme="light"]) .pr-ci-failure    { background: #3a1a1a; color: #f97171; }
+  html:not([data-theme="light"]) .pr-ci-pending    { background: #3a2d00; color: #e3b341; }
+  html:not([data-theme="light"]) .pr-review-approved  { background: #1a3a25; color: #3fb950; }
+  html:not([data-theme="light"]) .pr-review-changes   { background: #3a1a1a; color: #f97171; }
+  html:not([data-theme="light"]) .pr-review-pending   { background: #3a2d00; color: #e3b341; }
+}
 
 /* Stats page */
 .stats-page { padding: 8px 0; }

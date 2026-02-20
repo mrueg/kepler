@@ -88,6 +88,110 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   };
 }
 
+export interface PRInfo {
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  draft: boolean;
+  merged_at: string | null;
+  user: { login: string };
+  ciStatus: 'pending' | 'success' | 'failure' | 'unknown';
+  reviewStatus: 'approved' | 'changes_requested' | 'pending' | 'none';
+}
+
+export async function fetchEnhancementPRs(
+  kepNumber: string,
+): Promise<PRInfo[]> {
+  try {
+    const searchUrl = `${GITHUB_API_BASE}/search/issues?q=repo:kubernetes/enhancements+is:pr+${encodeURIComponent(kepNumber)}&per_page=5&sort=updated&order=desc`;
+    const searchResp = await fetch(searchUrl);
+    if (!searchResp.ok) return [];
+    const searchData = (await searchResp.json()) as {
+      items: { number: number; title: string; state: string; html_url: string; pull_request?: { merged_at: string | null }; draft?: boolean; user: { login: string } }[];
+    };
+
+    const kepNumberLower = kepNumber.toLowerCase();
+    const prs = searchData.items.filter((item) =>
+      item.title.toLowerCase().includes(kepNumberLower) ||
+      item.title.toLowerCase().includes(`kep-${kepNumberLower}`)
+    );
+
+    const results: PRInfo[] = await Promise.all(
+      prs.slice(0, 3).map(async (item) => {
+        const merged_at = item.pull_request?.merged_at ?? null;
+        let ciStatus: PRInfo['ciStatus'] = 'unknown';
+        let reviewStatus: PRInfo['reviewStatus'] = 'none';
+
+        try {
+          const prResp = await fetch(
+            `${GITHUB_API_BASE}/repos/kubernetes/enhancements/pulls/${item.number}/reviews`,
+          );
+          if (prResp.ok) {
+            const reviews = (await prResp.json()) as { state: string; user: { login: string } }[];
+            // Track the latest actionable review state per reviewer
+            const latestByReviewer: Record<string, string> = {};
+            for (const review of reviews) {
+              if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
+                latestByReviewer[review.user.login] = review.state;
+              }
+            }
+            const states = Object.values(latestByReviewer);
+            if (states.includes('CHANGES_REQUESTED')) reviewStatus = 'changes_requested';
+            else if (states.includes('APPROVED')) reviewStatus = 'approved';
+            else if (reviews.length > 0) reviewStatus = 'pending';
+          }
+        } catch {
+          // ignore review fetch errors
+        }
+
+        try {
+          const prDetailResp = await fetch(
+            `${GITHUB_API_BASE}/repos/kubernetes/enhancements/pulls/${item.number}`,
+          );
+          if (prDetailResp.ok) {
+            const prDetail = (await prDetailResp.json()) as { head: { sha: string } };
+            const checksResp = await fetch(
+              `${GITHUB_API_BASE}/repos/kubernetes/enhancements/commits/${prDetail.head.sha}/check-runs`,
+            );
+            if (checksResp.ok) {
+              const checksData = (await checksResp.json()) as { check_runs: { conclusion: string | null; status: string }[] };
+              const runs = checksData.check_runs;
+              if (runs.length === 0) {
+                ciStatus = 'unknown';
+              } else if (runs.some((r) => r.status !== 'completed')) {
+                ciStatus = 'pending';
+              } else if (runs.every((r) => r.conclusion === 'success' || r.conclusion === 'skipped' || r.conclusion === 'neutral')) {
+                ciStatus = 'success';
+              } else {
+                ciStatus = 'failure';
+              }
+            }
+          }
+        } catch {
+          // ignore CI fetch errors
+        }
+
+        return {
+          number: item.number,
+          title: item.title,
+          state: (item.state === 'open' || item.state === 'closed') ? item.state : 'closed',
+          html_url: item.html_url,
+          draft: item.draft ?? false,
+          merged_at,
+          user: item.user,
+          ciStatus,
+          reviewStatus,
+        };
+      }),
+    );
+
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchKepReadme(kepPath: string): Promise<string | null> {
   const dirPath = kepPath.slice(0, kepPath.lastIndexOf('/'));
   const readmeUrl = `${GITHUB_RAW_BASE}/${dirPath}/README.md`;

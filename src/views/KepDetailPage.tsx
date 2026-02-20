@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchKepYaml, fetchKepReadme, parseKepPath } from '../api/github';
+import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs } from '../api/github';
 import type { Kep } from '../types/kep';
+import type { PRInfo } from '../api/github';
 import { StatusBadge, StageBadge } from '../components/Badges';
+import { GitHubAvatar } from '../components/GitHubAvatar';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
 
 export function KepDetailPage({ number }: { number: string }) {
@@ -14,6 +16,7 @@ export function KepDetailPage({ number }: { number: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readme, setReadme] = useState<string | null>(null);
+  const [prs, setPrs] = useState<PRInfo[]>([]);
 
   useEffect(() => {
     if (!number) return;
@@ -98,6 +101,11 @@ export function KepDetailPage({ number }: { number: string }) {
     }).catch(() => {
       // README is optional, ignore fetch errors
     });
+    fetchEnhancementPRs(kep.number).then((data) => {
+      if (!cancelled) setPrs(data);
+    }).catch(() => {
+      // PR status is optional
+    });
     return () => {
       cancelled = true;
     };
@@ -167,6 +175,7 @@ export function KepDetailPage({ number }: { number: string }) {
                     rel="noopener noreferrer"
                     className="gh-link"
                   >
+                    <GitHubAvatar username={a} size={20} />
                     @{a.replace(/^@/, '')}
                   </a>
                 </li>
@@ -186,6 +195,7 @@ export function KepDetailPage({ number }: { number: string }) {
                     rel="noopener noreferrer"
                     className="gh-link"
                   >
+                    <GitHubAvatar username={r} size={20} />
                     @{r.replace(/^@/, '')}
                   </a>
                 </li>
@@ -205,6 +215,7 @@ export function KepDetailPage({ number }: { number: string }) {
                     rel="noopener noreferrer"
                     className="gh-link"
                   >
+                    <GitHubAvatar username={a} size={20} />
                     @{a.replace(/^@/, '')}
                   </a>
                 </li>
@@ -255,6 +266,31 @@ export function KepDetailPage({ number }: { number: string }) {
           </DetailSection>
         )}
 
+        {prs.length > 0 && (
+          <DetailSection title="Enhancement PRs">
+            <ul className="pr-list">
+              {prs.map((pr) => (
+                <li key={pr.number} className="pr-item">
+                  <a
+                    href={pr.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pr-link"
+                  >
+                    <span className="pr-number">#{pr.number}</span>
+                    <span className="pr-title">{pr.title}</span>
+                  </a>
+                  <div className="pr-badges">
+                    <PRStateBadge state={pr.state} merged={!!pr.merged_at} draft={pr.draft} />
+                    <PRCIBadge status={pr.ciStatus} />
+                    <PRReviewBadge status={pr.reviewStatus} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </DetailSection>
+        )}
+
         <div className="detail-github-link">
           <a
             href={kep.githubUrl}
@@ -277,6 +313,37 @@ export function KepDetailPage({ number }: { number: string }) {
       )}
     </div>
   );
+}
+
+function PRStateBadge({ state, merged, draft }: { state: 'open' | 'closed'; merged: boolean; draft: boolean }) {
+  if (merged) return <span className="pr-badge pr-badge-merged">Merged</span>;
+  if (state === 'closed') return <span className="pr-badge pr-badge-closed">Closed</span>;
+  if (draft) return <span className="pr-badge pr-badge-draft">Draft</span>;
+  return <span className="pr-badge pr-badge-open">Open</span>;
+}
+
+function PRCIBadge({ status }: { status: PRInfo['ciStatus'] }) {
+  if (status === 'unknown') return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    success: { label: '✓ CI Passing', cls: 'pr-ci-success' },
+    failure: { label: '✗ CI Failing', cls: 'pr-ci-failure' },
+    pending: { label: '⏳ CI Pending', cls: 'pr-ci-pending' },
+  };
+  const info = map[status];
+  if (!info) return null;
+  return <span className={`pr-badge ${info.cls}`}>{info.label}</span>;
+}
+
+function PRReviewBadge({ status }: { status: PRInfo['reviewStatus'] }) {
+  if (status === 'none') return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    approved: { label: '✓ Approved', cls: 'pr-review-approved' },
+    changes_requested: { label: '✗ Changes Requested', cls: 'pr-review-changes' },
+    pending: { label: '⏳ Review Pending', cls: 'pr-review-pending' },
+  };
+  const info = map[status];
+  if (!info) return null;
+  return <span className={`pr-badge ${info.cls}`}>{info.label}</span>;
 }
 
 function MetaItem({ label, value }: { label: string; value?: string }) {
