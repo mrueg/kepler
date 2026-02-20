@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
-import { StatusBadge } from './Badges';
+import { StatusBadge, StaleBadge } from './Badges';
+import { isStale } from '../utils/kep';
 
 interface KepTableProps {
   keps: Kep[];
@@ -47,6 +48,7 @@ export function KepTable({ keps }: KepTableProps) {
                 <td className="kep-table-td kep-table-td-sig">{sigDisplay}</td>
                 <td className="kep-table-td kep-table-td-status">
                   <StatusBadge status={kep.status} />
+                  {isStale(kep) && <StaleBadge />}
                 </td>
                 <td className="kep-table-td kep-table-td-date">{dateDisplay}</td>
               </tr>
