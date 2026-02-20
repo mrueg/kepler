@@ -32,6 +32,9 @@ export function MilestoneTimeline({ milestone, stage }: MilestoneTimelineProps) 
         const isCurrent = stage === key;
         const isFuture = hasTrackedStage && !isDone && !isCurrent;
 
+        const isFirst = i === 0;
+        const isLast = i === STAGES.length - 1;
+
         const nodeClass = [
           'milestone-node',
           isDone ? 'milestone-node--done' : '',
@@ -41,31 +44,43 @@ export function MilestoneTimeline({ milestone, stage }: MilestoneTimelineProps) 
           .filter(Boolean)
           .join(' ');
 
+        const leftConnectorClass = [
+          'milestone-connector',
+          isFirst ? 'milestone-connector--hidden' : '',
+          (isDone || isCurrent) ? 'milestone-connector--active' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        const rightConnectorClass = [
+          'milestone-connector',
+          isLast ? 'milestone-connector--hidden' : '',
+          isDone ? 'milestone-connector--active' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
         return (
           <div key={key} className="milestone-step" role="listitem">
-            {i > 0 && (
-              <div
-                className={`milestone-connector${isDone || isCurrent ? ' milestone-connector--active' : ''}`}
-                aria-hidden="true"
-              />
-            )}
-            <div className="milestone-step-inner">
-              <div className={nodeClass} aria-hidden="true">
+            <div className="milestone-step-track" aria-hidden="true">
+              <div className={leftConnectorClass} />
+              <div className={nodeClass}>
                 {isDone && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                     <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
-              <div className="milestone-label">{label}</div>
-              {version ? (
-                <div className={`milestone-version${isCurrent ? ' milestone-version--current' : ''}`}>
-                  {version}
-                </div>
-              ) : (
-                <div className="milestone-version milestone-version--empty">—</div>
-              )}
+              <div className={rightConnectorClass} />
             </div>
+            <div className="milestone-label">{label}</div>
+            {version ? (
+              <div className={`milestone-version${isCurrent ? ' milestone-version--current' : ''}`}>
+                {version}
+              </div>
+            ) : (
+              <div className="milestone-version milestone-version--empty">—</div>
+            )}
           </div>
         );
       })}
