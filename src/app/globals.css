@@ -540,28 +540,28 @@ a:hover { text-decoration: underline; }
 
 .milestone-step {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   flex: 1;
   min-width: 80px;
+  gap: 6px;
+}
+
+.milestone-step-track {
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
 .milestone-connector {
   flex: 1;
-  height: 3px;
+  height: 2px;
   background: var(--border);
-  margin-top: 12px;
   border-radius: 2px;
   transition: background .2s;
 }
 .milestone-connector--active { background: var(--accent); }
-
-.milestone-step-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 72px;
-}
+.milestone-connector--hidden { background: transparent; }
 
 .milestone-node {
   width: 26px;
