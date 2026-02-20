@@ -36,14 +36,14 @@ export function Logo({ size = 44 }: { size?: number }) {
       </defs>
 
       {/* Tripod legs */}
-      <line x1="40" y1="50" x2="18" y2="76" stroke="#1a56a0" strokeWidth="3" strokeLinecap="round" />
-      <line x1="40" y1="50" x2="62" y2="76" stroke="#1a56a0" strokeWidth="3" strokeLinecap="round" />
-      <line x1="40" y1="50" x2="40" y2="74" stroke="#1a56a0" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="40" y1="46" x2="18" y2="74" stroke="#1a56a0" strokeWidth="3" strokeLinecap="round" />
+      <line x1="40" y1="46" x2="62" y2="74" stroke="#1a56a0" strokeWidth="3" strokeLinecap="round" />
+      <line x1="40" y1="46" x2="40" y2="72" stroke="#1a56a0" strokeWidth="2.5" strokeLinecap="round" />
       {/* Brace between front legs */}
-      <line x1="24" y1="66" x2="56" y2="66" stroke="#1a56a0" strokeWidth="2" strokeLinecap="round" />
+      <line x1="24" y1="63" x2="56" y2="63" stroke="#1a56a0" strokeWidth="2" strokeLinecap="round" />
 
       {/* Telescope group – rotated so objective end points upper-right */}
-      <g transform="translate(40,50) rotate(-15)">
+      <g transform="translate(40,46) rotate(-25)">
         {/* Main tube body */}
         <rect x="-26" y="-7" width="48" height="14" rx="3" fill="#1e3a8a" />
         {/* Decorative rings */}
@@ -85,7 +85,7 @@ export function Logo({ size = 44 }: { size?: number }) {
       </g>
 
       {/* Mount pivot – sits where telescope meets tripod */}
-      <circle cx="40" cy="50" r="4.5" fill="#326ce5" />
+      <circle cx="40" cy="46" r="4.5" fill="#326ce5" />
     </svg>
   );
 }
