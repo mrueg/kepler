@@ -139,7 +139,7 @@ export async function fetchEnhancementPRs(
             const states = Object.values(latestByReviewer);
             if (states.includes('CHANGES_REQUESTED')) reviewStatus = 'changes_requested';
             else if (states.includes('APPROVED')) reviewStatus = 'approved';
-            else if (reviews.length > 0) reviewStatus = 'pending';
+            else if (reviews.length > 0 && !merged_at) reviewStatus = 'pending';
           }
         } catch {
           // ignore review fetch errors
