@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -14,6 +15,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('kepler_theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',s||(p?'dark':'light'));}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <div className="app">
           <header className="app-header">
@@ -24,6 +32,7 @@ export default function RootLayout({
             <p className="header-tagline">
               Browse Kubernetes Enhancement Proposals
             </p>
+            <ThemeToggle />
           </header>
           <main className="app-main">{children}</main>
           <footer className="app-footer">
