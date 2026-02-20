@@ -375,6 +375,90 @@ a:hover { text-decoration: underline; }
 }
 .github-btn:hover { background: #30363d; text-decoration: none; }
 
+/* Rendered markdown */
+.detail-markdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-top: 20px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+.detail-markdown h1,
+.detail-markdown h2,
+.detail-markdown h3,
+.detail-markdown h4,
+.detail-markdown h5,
+.detail-markdown h6 {
+  margin: 1.25em 0 0.5em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.detail-markdown h1 { font-size: 1.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.detail-markdown h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.detail-markdown h3 { font-size: 1.1rem; }
+.detail-markdown p { margin: 0.75em 0; }
+.detail-markdown ul,
+.detail-markdown ol { margin: 0.75em 0; padding-left: 1.5em; }
+.detail-markdown li { margin: 0.25em 0; }
+.detail-markdown code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.875em;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+.detail-markdown pre {
+  background: var(--k8s-dark);
+  color: #e6edf3;
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.detail-markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875em;
+  color: inherit;
+}
+.detail-markdown blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.detail-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  display: block;
+}
+.detail-markdown th,
+.detail-markdown td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.detail-markdown th { background: var(--bg); font-weight: 600; }
+.detail-markdown tr:nth-child(even) { background: var(--bg); }
+.detail-markdown a { color: var(--accent); }
+.detail-markdown a:hover { text-decoration: underline; }
+.detail-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+.detail-markdown img { max-width: 100%; height: auto; border-radius: var(--radius); }
+
 /* Detail loading/error */
 .detail-loading, .detail-error {
   text-align: center;

@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchKepYaml, parseKepPath } from '../api/github';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import { fetchKepYaml, fetchKepMarkdown, parseKepPath } from '../api/github';
 import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge } from '../components/Badges';
 
 export function KepDetailPage({ number }: { number: string }) {
   const [kep, setKep] = useState<Kep | null>(null);
+  const [markdownHtml, setMarkdownHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,6 +18,17 @@ export function KepDetailPage({ number }: { number: string }) {
     if (!number) return;
 
     let cancelled = false;
+
+    async function loadMarkdown(kepPath: string) {
+      try {
+        const md = await fetchKepMarkdown(kepPath);
+        if (!cancelled) {
+          setMarkdownHtml(DOMPurify.sanitize(marked(md) as string));
+        }
+      } catch {
+        // markdown is optional; ignore errors
+      }
+    }
 
     async function load() {
       // Try to get from cache first
@@ -31,6 +45,7 @@ export function KepDetailPage({ number }: { number: string }) {
               setKep(found);
               setLoading(false);
             }
+            loadMarkdown(found.path);
             return;
           }
         } catch {
@@ -57,6 +72,7 @@ export function KepDetailPage({ number }: { number: string }) {
                 setKep(data);
                 setLoading(false);
               }
+              loadMarkdown(path);
             } catch (err) {
               if (!cancelled) {
                 setError(
@@ -259,6 +275,13 @@ export function KepDetailPage({ number }: { number: string }) {
           </a>
         </div>
       </div>
+
+      {markdownHtml && (
+        <div
+          className="detail-markdown"
+          dangerouslySetInnerHTML={{ __html: markdownHtml }}
+        />
+      )}
     </div>
   );
 }

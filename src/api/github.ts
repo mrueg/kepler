@@ -69,6 +69,14 @@ export async function fetchKepPaths(): Promise<string[]> {
   return paths;
 }
 
+export async function fetchKepMarkdown(path: string): Promise<string> {
+  const mdPath = path.replace(/\/kep\.yaml$/, '/README.md');
+  const response = await fetch(`${GITHUB_RAW_BASE}/${mdPath}`);
+  if (!response.ok)
+    throw new Error(`Failed to fetch ${mdPath}: ${response.status}`);
+  return response.text();
+}
+
 export async function fetchKepYaml(path: string): Promise<Kep> {
   const response = await fetch(`${GITHUB_RAW_BASE}/${path}`);
   if (!response.ok)
