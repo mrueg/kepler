@@ -1,6 +1,6 @@
-# Kepler
+# Kepler – Kubernetes Enhancement Proposal Explorer
 
-A single-page application (SPA) for browsing and discovering [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps).
+A single-page application (SPA) for exploring [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps).
 
 ## Features
 
