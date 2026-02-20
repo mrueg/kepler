@@ -308,7 +308,7 @@ a:hover { text-decoration: underline; }
 
 /* Detail page */
 .detail-page {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .detail-back { margin-bottom: 16px; }
