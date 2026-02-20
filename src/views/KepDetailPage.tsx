@@ -9,6 +9,7 @@ import type { Kep } from '../types/kep';
 import type { PRInfo } from '../api/github';
 import { StatusBadge, StageBadge } from '../components/Badges';
 import { GitHubAvatar } from '../components/GitHubAvatar';
+import { MilestoneTimeline } from '../components/MilestoneTimeline';
 
 export function KepDetailPage({ number }: { number: string }) {
   const [kep, setKep] = useState<Kep | null>(null);
@@ -225,17 +226,7 @@ export function KepDetailPage({ number }: { number: string }) {
 
         {kep.milestone && Object.keys(kep.milestone).length > 0 && (
           <DetailSection title="Milestones">
-            <div className="milestone-grid">
-              {kep.milestone.alpha && (
-                <MetaItem label="Alpha" value={kep.milestone.alpha} />
-              )}
-              {kep.milestone.beta && (
-                <MetaItem label="Beta" value={kep.milestone.beta} />
-              )}
-              {kep.milestone.stable && (
-                <MetaItem label="Stable" value={kep.milestone.stable} />
-              )}
-            </div>
+            <MilestoneTimeline milestone={kep.milestone} stage={kep.stage} />
           </DetailSection>
         )}
 
