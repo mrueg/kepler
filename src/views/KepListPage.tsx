@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useKeps } from '../hooks/useKeps';
 import { KepCard } from '../components/KepCard';
+import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 
@@ -17,6 +18,7 @@ export function KepListPage() {
     stage: '',
   });
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const sigs = useMemo(
     () => [...new Set(keps.map((k) => k.sig))].sort(),
@@ -71,17 +73,41 @@ export function KepListPage() {
 
       {!loading && !error && (
         <div className="results-header">
-          {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-          {(filters.query || filters.sig || filters.status || filters.stage) &&
-            ` matching filters`}
+          <span>
+            {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
+            {(filters.query || filters.sig || filters.status || filters.stage) &&
+              ` matching filters`}
+          </span>
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              ⊞ Grid
+            </button>
+            <button
+              className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('table')}
+              aria-label="Table view"
+              aria-pressed={viewMode === 'table'}
+            >
+              ☰ Table
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="kep-grid">
-        {pageKeps.map((kep) => (
-          <KepCard key={kep.path} kep={kep} />
-        ))}
-      </div>
+      {viewMode === 'grid' ? (
+        <div className="kep-grid">
+          {pageKeps.map((kep) => (
+            <KepCard key={kep.path} kep={kep} />
+          ))}
+        </div>
+      ) : (
+        <KepTable keps={pageKeps} />
+      )}
 
       {totalPages > 1 && (
         <div className="pagination">
