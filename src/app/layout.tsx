@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Logo } from '../components/Logo';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default function RootLayout({
         <div className="app">
           <header className="app-header">
             <Link href="/" className="header-brand">
-              <span className="header-logo">⎈</span>
+              <Logo height={38} />
               <span className="header-title">Kepler</span>
             </Link>
             <p className="header-tagline">

@@ -1,5 +1,7 @@
 # Kepler
 
+![Kepler Logo](public/logo.svg)
+
 A single-page application (SPA) for browsing and discovering [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps).
 
 ## Features
