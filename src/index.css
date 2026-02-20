@@ -1,0 +1,5 @@
+/* Global resets are in App.css */
+body {
+  margin: 0;
+  min-width: 320px;
+}
