@@ -253,7 +253,7 @@ export function KepDetailPage({ number }: { number: string }) {
           <DetailSection title="See Also">
             <ul className="see-also-list">
               {kep['see-also'].map((ref) => (
-                <li key={ref}>{ref}</li>
+                <li key={ref}><KepRef value={ref} /></li>
               ))}
             </ul>
           </DetailSection>
@@ -263,7 +263,7 @@ export function KepDetailPage({ number }: { number: string }) {
           <DetailSection title="Replaces">
             <ul className="see-also-list">
               {kep.replaces.map((ref) => (
-                <li key={ref}>{ref}</li>
+                <li key={ref}><KepRef value={ref} /></li>
               ))}
             </ul>
           </DetailSection>
@@ -273,7 +273,7 @@ export function KepDetailPage({ number }: { number: string }) {
           <DetailSection title="Superseded By">
             <ul className="see-also-list">
               {kep['superseded-by'].map((ref) => (
-                <li key={ref}>{ref}</li>
+                <li key={ref}><KepRef value={ref} /></li>
               ))}
             </ul>
           </DetailSection>
@@ -382,4 +382,28 @@ function DetailSection({
       {children}
     </div>
   );
+}
+
+function extractKepNumber(ref: string): string | null {
+  // Match plain number: "1234"
+  if (/^\d+$/.test(ref.trim())) return ref.trim();
+  // Match "kep-1234" or "KEP-1234"
+  const kepPrefix = ref.match(/^kep-(\d+)/i);
+  if (kepPrefix) return kepPrefix[1];
+  // Match path like "/keps/sig-xxx/1234-slug/..." or "keps/sig-xxx/1234-slug/..."
+  const pathMatch = ref.match(/(?:^|\/)(\d+)-[^/]+/);
+  if (pathMatch) return pathMatch[1];
+  return null;
+}
+
+function KepRef({ value }: { value: string }) {
+  const number = extractKepNumber(value);
+  if (number) {
+    return (
+      <Link href={`/kep?number=${number}`} className="kep-ref-link">
+        {value}
+      </Link>
+    );
+  }
+  return <>{value}</>;
 }
