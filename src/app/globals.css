@@ -487,10 +487,97 @@ a:hover { text-decoration: underline; }
 }
 .gh-link:hover { border-color: var(--accent); background: var(--gh-link-hover-bg); text-decoration: none; }
 
-.milestone-grid {
+/* Milestone timeline */
+.milestone-timeline {
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0;
+  padding: 8px 0 4px;
+  overflow-x: auto;
+}
+
+.milestone-step {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 80px;
+}
+
+.milestone-connector {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  margin-top: 12px;
+  border-radius: 2px;
+  transition: background .2s;
+}
+.milestone-connector--active { background: var(--accent); }
+
+.milestone-step-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 72px;
+}
+
+.milestone-node {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.milestone-node--done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.milestone-node--current {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(50,108,229,.2);
+}
+[data-theme="dark"] .milestone-node--current {
+  box-shadow: 0 0 0 3px rgba(88,166,255,.2);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .milestone-node--current {
+    box-shadow: 0 0 0 3px rgba(88,166,255,.2);
+  }
+}
+.milestone-node--future {
+  border-color: var(--border);
+  background: var(--bg);
+  opacity: .6;
+}
+
+.milestone-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.milestone-version {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.milestone-version--current {
+  color: var(--accent);
+  font-weight: 700;
+}
+.milestone-version--empty {
+  color: var(--border);
 }
 
 .see-also-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
