@@ -88,6 +88,18 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   };
 }
 
+export async function fetchKepReadme(kepPath: string): Promise<string | null> {
+  const dirPath = kepPath.slice(0, kepPath.lastIndexOf('/'));
+  const readmeUrl = `${GITHUB_RAW_BASE}/${dirPath}/README.md`;
+  try {
+    const response = await fetch(readmeUrl);
+    if (!response.ok) return null;
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAllKeps(
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<Kep[]> {
