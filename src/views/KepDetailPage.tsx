@@ -279,7 +279,7 @@ export function KepDetailPage({ number }: { number: string }) {
         <div className="detail-readme">
           <h2 className="detail-readme-title">README</h2>
           <div className="detail-readme-body">
-            <Markdown>{readme}</Markdown>
+            <Markdown skipHtml>{readme}</Markdown>
           </div>
         </div>
       )}
