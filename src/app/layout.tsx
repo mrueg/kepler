@@ -4,8 +4,8 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Kepler – Kubernetes Enhancement Proposals Browser',
-  description: 'Browse and discover Kubernetes Enhancement Proposals (KEPs)',
+  title: 'Kepler – Kubernetes Enhancement Proposal Explorer',
+  description: 'Explore Kubernetes Enhancement Proposals (KEPs)',
 };
 
 export default function RootLayout({
@@ -29,6 +29,7 @@ export default function RootLayout({
               <span className="header-logo">⎈</span>
               <span className="header-title">Kepler</span>
             </Link>
+            <span className="header-tagline">Kubernetes Enhancement Proposal Explorer</span>
             <nav className="header-nav">
               <Link href="/" className="header-nav-link">
                 Browse
