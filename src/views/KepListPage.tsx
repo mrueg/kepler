@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
 import { KepCard } from '../components/KepCard';
 import { LoadingBar } from '../components/LoadingBar';
@@ -9,14 +10,30 @@ import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 const PAGE_SIZE = 48;
 
 export function KepListPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
   const [filters, setFilters] = useState<Filters>({
-    query: '',
-    sig: '',
-    status: '',
-    stage: '',
+    query: searchParams.get('q') ?? '',
+    sig: searchParams.get('sig') ?? '',
+    status: searchParams.get('status') ?? '',
+    stage: searchParams.get('stage') ?? '',
   });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const p = parseInt(searchParams.get('page') ?? '1', 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.query) params.set('q', filters.query);
+    if (filters.sig) params.set('sig', filters.sig);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.stage) params.set('stage', filters.stage);
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '/', { scroll: false });
+  }, [filters, page, router]);
 
   const sigs = useMemo(
     () => [...new Set(keps.map((k) => k.sig))].sort(),
