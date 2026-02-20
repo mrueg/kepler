@@ -19,7 +19,7 @@ export default function RootLayout({
         <div className="app">
           <header className="app-header">
             <Link href="/" className="header-brand">
-              <Logo height={38} />
+              <Logo size={44} />
               <span className="header-title">Kepler</span>
             </Link>
             <p className="header-tagline">

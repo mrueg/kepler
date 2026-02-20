@@ -48,7 +48,6 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .header-brand:hover { text-decoration: none; }
-.header-logo { font-size: 2rem; line-height: 1; }
 .header-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
 .header-tagline { font-size: 0.875rem; color: #8b949e; margin-left: auto; }
 
