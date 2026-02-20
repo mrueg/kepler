@@ -13,7 +13,7 @@ import { isStale } from '../utils/kep';
 const PAGE_SIZE = 48;
 
 export function KepListPage() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
@@ -40,8 +40,8 @@ export function KepListPage() {
     if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
-    router.replace(qs ? `?${qs}` : '/', { scroll: false });
-  }, [filters, page, router]);
+    replace(qs ? `?${qs}` : '/', { scroll: false });
+  }, [filters, page, replace]);
 
   const sigs = useMemo(
     () => [...new Set(keps.map((k) => k.sig))].sort(),
