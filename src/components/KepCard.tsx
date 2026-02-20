@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge } from './Badges';
 
@@ -11,7 +11,7 @@ export function KepCard({ kep }: KepCardProps) {
   const titleSlug = kep.slug.replace(/-/g, ' ');
 
   return (
-    <Link to={`/kep/${kep.number}`} className="kep-card">
+    <Link href={`/kep/${kep.number}`} className="kep-card">
       <div className="kep-card-number">KEP-{kep.number}</div>
       <h3 className="kep-card-title">{kep.title || titleSlug}</h3>
       <div className="kep-card-sig">{sigDisplay}</div>

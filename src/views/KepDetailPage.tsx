@@ -1,11 +1,12 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import Link from 'next/link';
 import { fetchKepYaml, parseKepPath } from '../api/github';
 import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge } from '../components/Badges';
 
-export function KepDetailPage() {
-  const { number } = useParams<{ number: string }>();
+export function KepDetailPage({ number }: { number: string }) {
   const [kep, setKep] = useState<Kep | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +99,7 @@ export function KepDetailPage() {
     return (
       <div className="detail-error">
         <p>{error || 'KEP not found'}</p>
-        <Link to="/" className="back-link">
+        <Link href="/" className="back-link">
           ← Back to list
         </Link>
       </div>
@@ -108,7 +109,7 @@ export function KepDetailPage() {
   return (
     <div className="detail-page">
       <div className="detail-back">
-        <Link to="/" className="back-link">
+        <Link href="/" className="back-link">
           ← All KEPs
         </Link>
       </div>

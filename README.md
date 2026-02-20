@@ -22,13 +22,12 @@ npm run dev
 
 ```bash
 npm run build
-npm run preview
+npm run start
 ```
 
 ## Tech Stack
 
+- [Next.js](https://nextjs.org/) 15 with App Router
 - [React](https://react.dev) + [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vite.dev) for bundling
-- [React Router](https://reactrouter.com/) for client-side routing
 - [js-yaml](https://github.com/nodeca/js-yaml) for parsing KEP YAML metadata
 - [GitHub REST API](https://docs.github.com/en/rest) + [raw.githubusercontent.com](https://raw.githubusercontent.com) for data fetching
