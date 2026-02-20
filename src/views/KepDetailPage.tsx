@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchKepYaml, parseKepPath } from '../api/github';
+import Markdown from 'react-markdown';
+import { fetchKepYaml, fetchKepReadme, parseKepPath } from '../api/github';
 import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge } from '../components/Badges';
 
@@ -10,6 +11,7 @@ export function KepDetailPage({ number }: { number: string }) {
   const [kep, setKep] = useState<Kep | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [readme, setReadme] = useState<string | null>(null);
 
   useEffect(() => {
     if (!number) return;
@@ -85,6 +87,19 @@ export function KepDetailPage({ number }: { number: string }) {
       cancelled = true;
     };
   }, [number]);
+
+  useEffect(() => {
+    if (!kep) return;
+    let cancelled = false;
+    fetchKepReadme(kep.path).then((content) => {
+      if (!cancelled) setReadme(content);
+    }).catch(() => {
+      // README is optional, ignore fetch errors
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [kep]);
 
   if (loading) {
     return (
@@ -259,6 +274,15 @@ export function KepDetailPage({ number }: { number: string }) {
           </a>
         </div>
       </div>
+
+      {readme && (
+        <div className="detail-readme">
+          <h2 className="detail-readme-title">README</h2>
+          <div className="detail-readme-body">
+            <Markdown>{readme}</Markdown>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
