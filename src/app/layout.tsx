@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Kepler – Kubernetes Enhancement Proposal Explorer',
-  description: 'Explore Kubernetes Enhancement Proposals (KEPs)',
+  description: 'Explore Kubernetes Enhancement Proposals (KEPs) and Gateway API Enhancement Proposals (GEPs)',
 };
 
 export default function RootLayout({
@@ -32,7 +32,10 @@ export default function RootLayout({
             <span className="header-tagline">Kubernetes Enhancement Proposal Explorer</span>
             <nav className="header-nav">
               <Link href="/" className="header-nav-link">
-                Browse
+                KEPs
+              </Link>
+              <Link href="/gep" className="header-nav-link">
+                GEPs
               </Link>
               <Link href="/stats" className="header-nav-link">
                 Stats
@@ -50,6 +53,15 @@ export default function RootLayout({
                 rel="noopener noreferrer"
               >
                 kubernetes/enhancements
+              </a>
+              {' · '}
+              GEP data from{' '}
+              <a
+                href="https://github.com/kubernetes-sigs/gateway-api"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                kubernetes-sigs/gateway-api
               </a>
             </p>
           </footer>
