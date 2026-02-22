@@ -6,6 +6,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { fetchGepYaml, fetchGepContent, parseGepPath, buildGepPath } from '../api/gatewayapi';
 import type { Gep, GepStatus } from '../types/gep';
+import { GitHubAvatar } from '../components/GitHubAvatar';
 
 const GEP_STATUS_COLORS: Record<GepStatus, string> = {
   Memorandum: '#6e40c9',
@@ -209,6 +210,7 @@ export function GepDetailPage({ number }: { number: string }) {
                     rel="noopener noreferrer"
                     className="gh-link"
                   >
+                    <GitHubAvatar username={a} size={20} />
                     @{a.replace(/^@/, '')}
                   </a>
                 </li>
