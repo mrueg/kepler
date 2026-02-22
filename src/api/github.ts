@@ -8,6 +8,8 @@ const CACHE_KEY_KEPS = 'kepler_keps_v2';
 const CACHE_KEY_TREE = 'kepler_tree_v2';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_KEPS = 6 * 60 * 60 * 1000; // 6 hours
+const MAX_CHANGELOG_COMMITS = 10;
+const MAX_COMMIT_MESSAGE_LENGTH = 120;
 
 interface CacheEntry<T> {
   data: T;
@@ -187,6 +189,71 @@ export async function fetchEnhancementPRs(
     );
 
     return results;
+  } catch {
+    return [];
+  }
+}
+
+export interface ChangelogEntry {
+  sha: string;
+  date: string;
+  author: string;
+  message: string;
+  status: string;
+}
+
+export async function fetchKepChangelog(kepPath: string): Promise<ChangelogEntry[]> {
+  try {
+    const commitsUrl = `${GITHUB_API_BASE}/repos/kubernetes/enhancements/commits?path=${encodeURIComponent(kepPath)}&per_page=${MAX_CHANGELOG_COMMITS}`;
+    const resp = await fetch(commitsUrl);
+    if (!resp.ok) return [];
+
+    const commits = (await resp.json()) as {
+      sha: string;
+      commit: { message: string; author: { date: string; name: string } };
+      author: { login: string } | null;
+    }[];
+
+    if (!commits.length) return [];
+
+    const entries = await Promise.allSettled(
+      commits.map(async (commit) => {
+        const rawUrl = `https://raw.githubusercontent.com/kubernetes/enhancements/${commit.sha}/${kepPath}`;
+        const contentResp = await fetch(rawUrl);
+        let status = '';
+        if (contentResp.ok) {
+          const text = await contentResp.text();
+          const match = text.match(/^status:\s*(.+)$/m);
+          if (match) status = match[1].trim();
+        }
+        return {
+          sha: commit.sha,
+          date: commit.commit.author.date,
+          author: commit.author?.login ?? commit.commit.author.name,
+          message: commit.commit.message.split('\n')[0].slice(0, MAX_COMMIT_MESSAGE_LENGTH),
+          status,
+        };
+      }),
+    );
+
+    const results = entries
+      .filter(
+        (e): e is PromiseFulfilledResult<ChangelogEntry> =>
+          e.status === 'fulfilled',
+      )
+      .map((e) => e.value);
+
+    // Filter to entries where status changed (oldest→newest, then reverse for display)
+    const statusChanges: ChangelogEntry[] = [];
+    let prevStatus = '';
+    for (const entry of [...results].reverse()) {
+      if (entry.status && entry.status !== prevStatus) {
+        statusChanges.unshift(entry);
+        prevStatus = entry.status;
+      }
+    }
+
+    return statusChanges.length > 0 ? statusChanges : results.filter((e) => e.status);
   } catch {
     return [];
   }

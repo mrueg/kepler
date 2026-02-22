@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs } from '../api/github';
+import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs, fetchKepChangelog } from '../api/github';
 import type { Kep } from '../types/kep';
-import type { PRInfo } from '../api/github';
-import { StatusBadge, StageBadge, StaleBadge } from '../components/Badges';
+import type { PRInfo, ChangelogEntry } from '../api/github';
+import { StatusBadge, StageBadge, StaleBadge, PRRBadge } from '../components/Badges';
 import { GitHubAvatar } from '../components/GitHubAvatar';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
+import { ChangelogTimeline } from '../components/ChangelogTimeline';
 import { isStale } from '../utils/kep';
 import { useBookmarks } from '../hooks/useBookmarks';
 
@@ -19,6 +20,7 @@ export function KepDetailPage({ number }: { number: string }) {
   const [error, setError] = useState<string | null>(null);
   const [readme, setReadme] = useState<string | null>(null);
   const [prs, setPrs] = useState<PRInfo[]>([]);
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
   useEffect(() => {
@@ -109,6 +111,11 @@ export function KepDetailPage({ number }: { number: string }) {
     }).catch(() => {
       // PR status is optional
     });
+    fetchKepChangelog(kep.path).then((data) => {
+      if (!cancelled) setChangelog(data);
+    }).catch(() => {
+      // Changelog is optional
+    });
     return () => {
       cancelled = true;
     };
@@ -149,6 +156,9 @@ export function KepDetailPage({ number }: { number: string }) {
           <StatusBadge status={kep.status} />
           <StageBadge stage={kep.stage} />
           {isStale(kep) && <StaleBadge />}
+          {kep['prr-approvers'] && kep['prr-approvers'].length > 0 && (
+            <PRRBadge approved={true} />
+          )}
           <button
             className={`bookmark-star bookmark-star-detail${isBookmarked(kep.number) ? ' bookmark-star-active' : ''}`}
             onClick={() => toggleBookmark(kep.number)}
@@ -179,61 +189,25 @@ export function KepDetailPage({ number }: { number: string }) {
 
         {kep.authors && kep.authors.length > 0 && (
           <DetailSection title="Authors">
-            <ul className="people-list">
-              {kep.authors.map((a) => (
-                <li key={a}>
-                  <a
-                    href={`https://github.com/${a.replace(/^@/, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="gh-link"
-                  >
-                    <GitHubAvatar username={a} size={20} />
-                    @{a.replace(/^@/, '')}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <PeopleList people={kep.authors} />
           </DetailSection>
         )}
 
         {kep.reviewers && kep.reviewers.length > 0 && (
           <DetailSection title="Reviewers">
-            <ul className="people-list">
-              {kep.reviewers.map((r) => (
-                <li key={r}>
-                  <a
-                    href={`https://github.com/${r.replace(/^@/, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="gh-link"
-                  >
-                    <GitHubAvatar username={r} size={20} />
-                    @{r.replace(/^@/, '')}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <PeopleList people={kep.reviewers} />
           </DetailSection>
         )}
 
         {kep.approvers && kep.approvers.length > 0 && (
           <DetailSection title="Approvers">
-            <ul className="people-list">
-              {kep.approvers.map((a) => (
-                <li key={a}>
-                  <a
-                    href={`https://github.com/${a.replace(/^@/, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="gh-link"
-                  >
-                    <GitHubAvatar username={a} size={20} />
-                    @{a.replace(/^@/, '')}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <PeopleList people={kep.approvers} />
+          </DetailSection>
+        )}
+
+        {kep['prr-approvers'] && kep['prr-approvers'].length > 0 && (
+          <DetailSection title="PRR Approvers">
+            <PeopleList people={kep['prr-approvers']} />
           </DetailSection>
         )}
 
@@ -304,6 +278,12 @@ export function KepDetailPage({ number }: { number: string }) {
           </DetailSection>
         )}
 
+        {changelog.length > 0 && (
+          <DetailSection title="Status History">
+            <ChangelogTimeline entries={changelog} />
+          </DetailSection>
+        )}
+
         <div className="detail-github-link">
           <a
             href={kep.githubUrl}
@@ -366,6 +346,26 @@ function MetaItem({ label, value }: { label: string; value?: string }) {
       <dt className="meta-label">{label}</dt>
       <dd className="meta-value">{value}</dd>
     </div>
+  );
+}
+
+function PeopleList({ people }: { people: string[] }) {
+  return (
+    <ul className="people-list">
+      {people.map((person) => (
+        <li key={person}>
+          <a
+            href={`https://github.com/${person.replace(/^@/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="gh-link"
+          >
+            <GitHubAvatar username={person} size={20} />
+            @{person.replace(/^@/, '')}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 
