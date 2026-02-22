@@ -136,3 +136,154 @@ export async function fetchAllGeps(
   setCache(CACHE_KEY_GEPS, results);
   return results;
 }
+
+export interface GepPRInfo {
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  draft: boolean;
+  merged_at: string | null;
+  user: { login: string };
+  ciStatus: 'pending' | 'success' | 'failure' | 'unknown';
+  reviewStatus: 'approved' | 'changes_requested' | 'pending' | 'none';
+}
+
+/**
+ * Fetch live PR state/CI/review status for a list of gateway-api PR URLs.
+ * Each URL is expected to look like:
+ *   https://github.com/kubernetes-sigs/gateway-api/pull/<number>
+ */
+export async function fetchGatewayApiPRs(
+  changelogUrls: string[],
+): Promise<GepPRInfo[]> {
+  const prNumbers = changelogUrls
+    .map((url) => {
+      const m = url.match(/kubernetes-sigs\/gateway-api\/pull\/(\d+)/);
+      return m ? parseInt(m[1], 10) : null;
+    })
+    .filter((n): n is number => n !== null);
+
+  if (prNumbers.length === 0) return [];
+
+  const results: GepPRInfo[] = await Promise.all(
+    prNumbers.map(async (prNum) => {
+      let title = `PR #${prNum}`;
+      let state: 'open' | 'closed' = 'closed';
+      let draft = false;
+      let merged_at: string | null = null;
+      let user = { login: '' };
+      let ciStatus: GepPRInfo['ciStatus'] = 'unknown';
+      let reviewStatus: GepPRInfo['reviewStatus'] = 'none';
+
+      try {
+        const prResp = await fetch(
+          `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}`,
+        );
+        if (prResp.ok) {
+          const pr = (await prResp.json()) as {
+            number: number;
+            title: string;
+            state: string;
+            html_url: string;
+            draft: boolean;
+            merged_at: string | null;
+            user: { login: string };
+            head: { sha: string };
+          };
+          title = pr.title;
+          state = (pr.state === 'open' || pr.state === 'closed') ? pr.state : 'closed';
+          draft = pr.draft ?? false;
+          merged_at = pr.merged_at;
+          user = pr.user;
+
+          // Reviews
+          try {
+            const reviewsResp = await fetch(
+              `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}/reviews`,
+            );
+            if (reviewsResp.ok) {
+              const reviews = (await reviewsResp.json()) as { state: string; user: { login: string } }[];
+              const latestByReviewer: Record<string, string> = {};
+              for (const review of reviews) {
+                if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
+                  latestByReviewer[review.user.login] = review.state;
+                }
+              }
+              const states = Object.values(latestByReviewer);
+              if (states.includes('CHANGES_REQUESTED')) reviewStatus = 'changes_requested';
+              else if (states.includes('APPROVED')) reviewStatus = 'approved';
+              else if (reviews.length > 0 && !merged_at) reviewStatus = 'pending';
+            }
+          } catch {
+            // optional
+          }
+
+          // CI check runs
+          try {
+            const checksResp = await fetch(
+              `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${pr.head.sha}/check-runs`,
+            );
+            if (checksResp.ok) {
+              const checksData = (await checksResp.json()) as {
+                check_runs: { conclusion: string | null; status: string }[];
+              };
+              const runs = checksData.check_runs;
+              if (runs.length > 0) {
+                if (runs.some((r) => r.status !== 'completed')) {
+                  ciStatus = 'pending';
+                } else if (
+                  runs.every(
+                    (r) =>
+                      r.conclusion === 'success' ||
+                      r.conclusion === 'skipped' ||
+                      r.conclusion === 'neutral',
+                  )
+                ) {
+                  ciStatus = 'success';
+                } else {
+                  ciStatus = 'failure';
+                }
+              }
+            }
+          } catch {
+            // optional
+          }
+        } else {
+          // PR might be closed — try issues endpoint for merged PRs
+          const issueResp = await fetch(
+            `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/issues/${prNum}`,
+          );
+          if (issueResp.ok) {
+            const issue = (await issueResp.json()) as {
+              title: string;
+              state: string;
+              user: { login: string };
+              pull_request?: { merged_at: string | null };
+            };
+            title = issue.title;
+            state = 'closed';
+            merged_at = issue.pull_request?.merged_at ?? null;
+            user = issue.user;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      return {
+        number: prNum,
+        title,
+        state,
+        html_url: `https://github.com/kubernetes-sigs/gateway-api/pull/${prNum}`,
+        draft,
+        merged_at,
+        user,
+        ciStatus,
+        reviewStatus,
+      };
+    }),
+  );
+
+  return results;
+}

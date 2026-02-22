@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useGeps } from '../hooks/useGeps';
+import { useGepBookmarks } from '../hooks/useGepBookmarks';
 import { LoadingBar } from '../components/LoadingBar';
 import type { Gep, GepStatus } from '../types/gep';
 
@@ -29,10 +30,19 @@ function GepStatusBadge({ status }: { status?: GepStatus }) {
   );
 }
 
-function GepCard({ gep }: { gep: Gep }) {
+function GepCard({
+  gep,
+  isBookmarked,
+  onToggleBookmark,
+}: {
+  gep: Gep;
+  isBookmarked?: boolean;
+  onToggleBookmark?: (gepNumber: string) => void;
+}) {
+  const gepNumber = String(gep.number);
   return (
-    <Link href={`/gep?number=${gep.number}`} className="kep-card">
-      <div className="kep-card-number">GEP-{gep.number}</div>
+    <Link href={`/gep?number=${gepNumber}`} className="kep-card">
+      <div className="kep-card-number">GEP-{gepNumber}</div>
       <div className="kep-card-title">{gep.name}</div>
       <div className="kep-card-badges">
         <GepStatusBadge status={gep.status} />
@@ -43,27 +53,114 @@ function GepCard({ gep }: { gep: Gep }) {
           {gep.authors.length > 3 ? ` +${gep.authors.length - 3}` : ''}
         </div>
       )}
+      {onToggleBookmark && (
+        <button
+          className={`bookmark-star${isBookmarked ? ' bookmark-star-active' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleBookmark(gepNumber);
+          }}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+          aria-pressed={isBookmarked}
+          title={isBookmarked ? 'Remove bookmark' : 'Bookmark this GEP'}
+        >
+          {isBookmarked ? '★' : '☆'}
+        </button>
+      )}
     </Link>
+  );
+}
+
+function GepTable({
+  geps,
+  isBookmarked,
+  onToggleBookmark,
+}: {
+  geps: Gep[];
+  isBookmarked?: (number: string) => boolean;
+  onToggleBookmark?: (number: string) => void;
+}) {
+  return (
+    <div className="kep-table-wrapper">
+      <table className="kep-table">
+        <thead>
+          <tr>
+            <th className="kep-table-th kep-table-th-number">Number</th>
+            <th className="kep-table-th kep-table-th-title">Name</th>
+            <th className="kep-table-th kep-table-th-status">Status</th>
+            <th className="kep-table-th kep-table-th-date">Authors</th>
+            {onToggleBookmark && (
+              <th className="kep-table-th kep-table-th-bookmark" aria-label="Bookmark" />
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {geps.map((gep) => {
+            const gepNumber = String(gep.number);
+            const bookmarked = isBookmarked?.(gepNumber) ?? false;
+            return (
+              <tr key={gep.path} className="kep-table-row">
+                <td className="kep-table-td kep-table-td-number">
+                  <Link href={`/gep?number=${gepNumber}`} className="kep-table-number-link">
+                    GEP-{gepNumber}
+                  </Link>
+                </td>
+                <td className="kep-table-td kep-table-td-title">
+                  <Link href={`/gep?number=${gepNumber}`} className="kep-table-title-link">
+                    {gep.name}
+                  </Link>
+                </td>
+                <td className="kep-table-td kep-table-td-status">
+                  <GepStatusBadge status={gep.status} />
+                </td>
+                <td className="kep-table-td kep-table-td-date">
+                  {gep.authors?.slice(0, 3).map((a) => `@${a}`).join(', ')}
+                  {(gep.authors?.length ?? 0) > 3 ? ` +${gep.authors!.length - 3}` : ''}
+                </td>
+                {onToggleBookmark && (
+                  <td className="kep-table-td kep-table-td-bookmark">
+                    <button
+                      className={`bookmark-star${bookmarked ? ' bookmark-star-active' : ''}`}
+                      onClick={() => onToggleBookmark(gepNumber)}
+                      aria-label={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                      aria-pressed={bookmarked}
+                      title={bookmarked ? 'Remove bookmark' : 'Bookmark this GEP'}
+                    >
+                      {bookmarked ? '★' : '☆'}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 interface GepFilters {
   query: string;
   status: string;
+  bookmarked: boolean;
 }
 
 export function GepListPage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { geps, loading, progress, error, reload } = useGeps();
+  const { bookmarks, toggleBookmark, isBookmarked } = useGepBookmarks();
   const [filters, setFilters] = useState<GepFilters>({
     query: searchParams.get('q') ?? '',
     status: searchParams.get('status') ?? '',
+    bookmarked: false,
   });
   const [page, setPage] = useState(() => {
     const p = parseInt(searchParams.get('page') ?? '1', 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -94,9 +191,10 @@ export function GepListPage() {
         return false;
       }
       if (filters.status && gep.status !== filters.status) return false;
+      if (filters.bookmarked && !isBookmarked(String(gep.number))) return false;
       return true;
     });
-  }, [geps, filters]);
+  }, [geps, filters, isBookmarked]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -105,22 +203,12 @@ export function GepListPage() {
     currentPage * PAGE_SIZE,
   );
 
-  function handleQueryChange(q: string) {
-    setFilters((f) => ({ ...f, query: q }));
-    setPage(1);
-  }
-
-  function handleStatusChange(status: string) {
-    setFilters((f) => ({ ...f, status }));
-    setPage(1);
-  }
+  const hasFilters = filters.query || filters.status || filters.bookmarked;
 
   function handleClear() {
-    setFilters({ query: '', status: '' });
+    setFilters({ query: '', status: '', bookmarked: false });
     setPage(1);
   }
-
-  const hasFilters = filters.query || filters.status;
 
   return (
     <div className="list-page">
@@ -130,13 +218,13 @@ export function GepListPage() {
           type="search"
           placeholder="Search GEPs by number, name, or author…"
           value={filters.query}
-          onChange={(e) => handleQueryChange(e.target.value)}
+          onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
         />
         <div className="filter-selects">
           <select
             className="filter-select"
             value={filters.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
+            onChange={(e) => { setFilters((f) => ({ ...f, status: e.target.value })); setPage(1); }}
           >
             <option value="">All statuses</option>
             {statuses.map((s) => (
@@ -146,6 +234,19 @@ export function GepListPage() {
           {hasFilters && (
             <button className="clear-btn" onClick={handleClear}>
               Clear
+            </button>
+          )}
+          {(bookmarks.size > 0 || filters.bookmarked) && (
+            <button
+              className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
+              onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
+              aria-pressed={filters.bookmarked}
+              title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
+            >
+              {filters.bookmarked ? '★' : '☆'} Bookmarks
+              {bookmarks.size > 0 && (
+                <span className="bookmark-filter-count">{bookmarks.size}</span>
+              )}
             </button>
           )}
         </div>
@@ -168,14 +269,41 @@ export function GepListPage() {
             {filtered.length} GEP{filtered.length !== 1 ? 's' : ''}
             {hasFilters && ` matching filters`}
           </span>
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              ⊞ Grid
+            </button>
+            <button
+              className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('table')}
+              aria-label="Table view"
+              aria-pressed={viewMode === 'table'}
+            >
+              ☰ Table
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="kep-grid">
-        {pageGeps.map((gep) => (
-          <GepCard key={gep.path} gep={gep} />
-        ))}
-      </div>
+      {viewMode === 'grid' ? (
+        <div className="kep-grid">
+          {pageGeps.map((gep) => (
+            <GepCard
+              key={gep.path}
+              gep={gep}
+              isBookmarked={isBookmarked(String(gep.number))}
+              onToggleBookmark={toggleBookmark}
+            />
+          ))}
+        </div>
+      ) : (
+        <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+      )}
 
       {totalPages > 1 && (
         <div className="pagination">
