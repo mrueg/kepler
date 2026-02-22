@@ -21,7 +21,7 @@ export function KepListPage() {
     query: searchParams.get('q') ?? '',
     sig: searchParams.get('sig')?.split(',').filter(Boolean) ?? [],
     status: searchParams.get('status')?.split(',').filter(Boolean) ?? [],
-    stage: searchParams.get('stage') ?? '',
+    stage: searchParams.get('stage')?.split(',').filter(Boolean) ?? [],
     stale: searchParams.get('stale') === 'true',
     bookmarked: false,
   });
@@ -36,7 +36,7 @@ export function KepListPage() {
     if (filters.query) params.set('q', filters.query);
     if (filters.sig.length) params.set('sig', filters.sig.join(','));
     if (filters.status.length) params.set('status', filters.status.join(','));
-    if (filters.stage) params.set('stage', filters.stage);
+    if (filters.stage.length) params.set('stage', filters.stage.join(','));
     if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
@@ -66,7 +66,7 @@ export function KepListPage() {
       }
       if (filters.sig.length && !filters.sig.includes(kep.sig)) return false;
       if (filters.status.length && !filters.status.includes(kep.status ?? '')) return false;
-      if (filters.stage && kep.stage !== filters.stage) return false;
+      if (filters.stage.length && !filters.stage.includes(kep.stage ?? '')) return false;
       if (filters.stale && !isStale(kep)) return false;
       if (filters.bookmarked && !isBookmarked(kep.number)) return false;
       return true;
@@ -104,7 +104,7 @@ export function KepListPage() {
         <div className="results-header">
           <span>
             {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-            {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage || filters.stale || filters.bookmarked) &&
+            {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
               ` matching filters`}
           </span>
           <div className="view-toggle">
