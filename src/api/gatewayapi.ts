@@ -4,8 +4,8 @@ import type { Gep, GepMetadata } from '../types/gep';
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main';
 const GITHUB_API_BASE = 'https://api.github.com';
-const CACHE_KEY_GEPS = 'kepler_geps_v2';
-const CACHE_KEY_GEP_TREE = 'kepler_gep_tree_v1';
+export const CACHE_KEY_GEPS = 'kepler_geps_v2';
+export const CACHE_KEY_GEP_TREE = 'kepler_gep_tree_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_GEPS = 6 * 60 * 60 * 1000; // 6 hours
 

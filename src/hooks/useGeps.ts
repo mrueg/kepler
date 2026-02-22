@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAllGeps } from '../api/gatewayapi';
+import { fetchAllGeps, CACHE_KEY_GEPS, CACHE_KEY_GEP_TREE } from '../api/gatewayapi';
 import type { Gep } from '../types/gep';
 
 export interface UseGepsResult {
@@ -52,8 +52,8 @@ export function useGeps(): UseGepsResult {
   }, [version]);
 
   const reload = useCallback(() => {
-    localStorage.removeItem('kepler_geps_v2');
-    localStorage.removeItem('kepler_gep_tree_v1');
+    localStorage.removeItem(CACHE_KEY_GEPS);
+    localStorage.removeItem(CACHE_KEY_GEP_TREE);
     setVersion((v) => v + 1);
   }, []);
 

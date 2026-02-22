@@ -4,8 +4,8 @@ import type { Kep, KepMetadata } from '../types/kep';
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes/enhancements/master';
 const GITHUB_API_BASE = 'https://api.github.com';
-const CACHE_KEY_KEPS = 'kepler_keps_v3';
-const CACHE_KEY_TREE = 'kepler_tree_v2';
+export const CACHE_KEY_KEPS = 'kepler_keps_v3';
+export const CACHE_KEY_TREE = 'kepler_tree_v2';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_KEPS = 6 * 60 * 60 * 1000; // 6 hours
 

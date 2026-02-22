@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchGepYaml, fetchGepContent, parseGepPath, buildGepPath, fetchGatewayApiPRs } from '../api/gatewayapi';
+import { fetchGepYaml, fetchGepContent, parseGepPath, buildGepPath, fetchGatewayApiPRs, CACHE_KEY_GEPS, CACHE_KEY_GEP_TREE } from '../api/gatewayapi';
 import type { Gep, GepStatus } from '../types/gep';
 import type { GepPRInfo } from '../api/gatewayapi';
 import { GitHubAvatar } from '../components/GitHubAvatar';
@@ -70,7 +70,7 @@ export function GepDetailPage({ number }: { number: string }) {
 
     async function load() {
       // Try to get from cache first
-      const cachedRaw = localStorage.getItem('kepler_geps_v1');
+      const cachedRaw = localStorage.getItem(CACHE_KEY_GEPS);
       if (cachedRaw) {
         try {
           const { data } = JSON.parse(cachedRaw) as {
@@ -91,7 +91,7 @@ export function GepDetailPage({ number }: { number: string }) {
       }
 
       // Also check tree cache
-      const treeCached = localStorage.getItem('kepler_gep_tree_v1');
+      const treeCached = localStorage.getItem(CACHE_KEY_GEP_TREE);
       if (treeCached) {
         try {
           const { data: paths } = JSON.parse(treeCached) as {
