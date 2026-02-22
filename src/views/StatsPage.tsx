@@ -15,6 +15,7 @@ import {
   LineChart,
   Line,
   CartesianGrid,
+  LabelList,
 } from 'recharts';
 import { useKeps } from '../hooks/useKeps';
 import { useGeps } from '../hooks/useGeps';
@@ -111,6 +112,38 @@ function KepStats() {
     return Object.entries(counts)
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
+  }, [keps]);
+
+  const stageFunnelData = useMemo(() => {
+    const withAlpha = keps.filter((k) => k.milestone?.alpha).length;
+    const withBeta = keps.filter((k) => k.milestone?.beta).length;
+    const withStable = keps.filter((k) => k.milestone?.stable).length;
+    return [
+      { stage: 'All KEPs', count: keps.length, fill: '#8b949e' },
+      { stage: 'Reached Alpha', count: withAlpha, fill: '#e2a03f' },
+      { stage: 'Reached Beta', count: withBeta, fill: '#326ce5' },
+      { stage: 'Reached Stable', count: withStable, fill: '#2ea043' },
+    ];
+  }, [keps]);
+
+  const timeToStableData = useMemo(() => {
+    function parseKubeMinor(v: string | undefined): number | null {
+      if (!v) return null;
+      const match = v.replace(/^v/, '').match(/^1\.(\d+)/);
+      return match ? parseInt(match[1]) : null;
+    }
+    const counts: Record<number, number> = {};
+    for (const kep of keps) {
+      const alpha = parseKubeMinor(kep.milestone?.alpha);
+      const stable = parseKubeMinor(kep.milestone?.stable);
+      if (alpha !== null && stable !== null && stable >= alpha) {
+        const diff = stable - alpha;
+        counts[diff] = (counts[diff] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .map(([releases, count]) => ({ releases: Number(releases), count }))
+      .sort((a, b) => a.releases - b.releases);
   }, [keps]);
 
   const milestoneHeatmapData = useMemo(() => {
@@ -302,6 +335,76 @@ function KepStats() {
               <MilestoneHeatmap data={milestoneHeatmapData} />
             </section>
           )}
+
+          {stageFunnelData[0].count > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">Stage Funnel — KEP Progression (alpha → beta → stable)</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={stageFunnelData}
+                  layout="vertical"
+                  margin={{ top: 8, right: 60, left: 8, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+                  <YAxis
+                    type="category"
+                    dataKey="stage"
+                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+                    width={130}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                    formatter={(value) => [value, 'KEPs']}
+                  />
+                  <Bar dataKey="count" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    {stageFunnelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                    <LabelList dataKey="count" position="right" style={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
+
+          {timeToStableData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">Time-to-Stable Histogram — Releases from Alpha to Stable</h2>
+              <p className="stats-chart-note">Kubernetes releases ~3× per year; each release ≈ 4 months. Only KEPs with both alpha and stable milestones are included.</p>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={timeToStableData}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="releases"
+                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+                    label={{ value: 'Kubernetes releases', position: 'insideBottom', offset: -2, fill: 'var(--text-secondary)', fontSize: 12 }}
+                    height={40}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                    formatter={(value, _name, props) => [
+                      value,
+                      `KEPs (${props.payload.releases} release${props.payload.releases !== 1 ? 's' : ''})`,
+                    ]}
+                  />
+                  <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
         </div>
       )}
     </>
@@ -320,6 +423,23 @@ function GepStats() {
     return Object.entries(counts)
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
+  }, [geps]);
+
+  const gepStageFunnelData = useMemo(() => {
+    const provisional = geps.filter((g) =>
+      ['Provisional', 'Experimental', 'Standard'].includes(g.status)
+    ).length;
+    const experimental = geps.filter((g) =>
+      ['Experimental', 'Standard'].includes(g.status)
+    ).length;
+    const standard = geps.filter((g) => g.status === 'Standard').length;
+    if (provisional === 0) return [];
+    return [
+      { stage: 'All GEPs', count: geps.length, fill: '#8b949e' },
+      { stage: 'Reached Provisional', count: provisional, fill: '#e2a03f' },
+      { stage: 'Reached Experimental', count: experimental, fill: '#326ce5' },
+      { stage: 'Reached Standard', count: standard, fill: '#2ea043' },
+    ];
   }, [geps]);
 
   const authorData = useMemo(() => {
@@ -430,6 +550,42 @@ function GepStats() {
               </tbody>
             </table>
           </section>
+
+          {gepStageFunnelData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">Stage Funnel — GEP Progression (Provisional → Experimental → Standard)</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={gepStageFunnelData}
+                  layout="vertical"
+                  margin={{ top: 8, right: 60, left: 8, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+                  <YAxis
+                    type="category"
+                    dataKey="stage"
+                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+                    width={160}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                    formatter={(value) => [value, 'GEPs']}
+                  />
+                  <Bar dataKey="count" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    {gepStageFunnelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                    <LabelList dataKey="count" position="right" style={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
 
           {authorData.length > 0 && (
             <section className="stats-card stats-card--wide">
