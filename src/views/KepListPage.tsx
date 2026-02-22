@@ -19,8 +19,8 @@ export function KepListPage() {
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
-    sig: searchParams.get('sig') ?? '',
-    status: searchParams.get('status') ?? '',
+    sig: searchParams.get('sig')?.split(',').filter(Boolean) ?? [],
+    status: searchParams.get('status')?.split(',').filter(Boolean) ?? [],
     stage: searchParams.get('stage') ?? '',
     stale: searchParams.get('stale') === 'true',
     bookmarked: false,
@@ -34,8 +34,8 @@ export function KepListPage() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (filters.query) params.set('q', filters.query);
-    if (filters.sig) params.set('sig', filters.sig);
-    if (filters.status) params.set('status', filters.status);
+    if (filters.sig.length) params.set('sig', filters.sig.join(','));
+    if (filters.status.length) params.set('status', filters.status.join(','));
     if (filters.stage) params.set('stage', filters.stage);
     if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
@@ -59,12 +59,13 @@ export function KepListPage() {
         !kep.title?.toLowerCase().includes(q) &&
         !kep.number.includes(q) &&
         !kep.authors?.some((a) => a.toLowerCase().includes(q)) &&
-        !kep.slug.includes(q)
+        !kep.slug.includes(q) &&
+        !kep.readme?.toLowerCase().includes(q)
       ) {
         return false;
       }
-      if (filters.sig && kep.sig !== filters.sig) return false;
-      if (filters.status && kep.status !== filters.status) return false;
+      if (filters.sig.length && !filters.sig.includes(kep.sig)) return false;
+      if (filters.status.length && !filters.status.includes(kep.status ?? '')) return false;
       if (filters.stage && kep.stage !== filters.stage) return false;
       if (filters.stale && !isStale(kep)) return false;
       if (filters.bookmarked && !isBookmarked(kep.number)) return false;
@@ -103,7 +104,7 @@ export function KepListPage() {
         <div className="results-header">
           <span>
             {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-            {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) &&
+            {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage || filters.stale || filters.bookmarked) &&
               ` matching filters`}
           </span>
           <div className="view-toggle">

@@ -4,7 +4,7 @@ import type { Gep, GepMetadata } from '../types/gep';
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main';
 const GITHUB_API_BASE = 'https://api.github.com';
-const CACHE_KEY_GEPS = 'kepler_geps_v1';
+const CACHE_KEY_GEPS = 'kepler_geps_v2';
 const CACHE_KEY_GEP_TREE = 'kepler_gep_tree_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_GEPS = 6 * 60 * 60 * 1000; // 6 hours
@@ -72,11 +72,16 @@ export async function fetchGepPaths(): Promise<string[]> {
 }
 
 export async function fetchGepYaml(path: string): Promise<Gep> {
-  const response = await fetch(`${GITHUB_RAW_BASE}/${path}`);
+  const [response, contentResponse] = await Promise.all([
+    fetch(`${GITHUB_RAW_BASE}/${path}`),
+    fetch(`${GITHUB_RAW_BASE}/${path.replace('/metadata.yaml', '/index.md')}`).catch(() => null),
+  ]);
   if (!response.ok)
     throw new Error(`Failed to fetch ${path}: ${response.status}`);
 
   const text = await response.text();
+  const content = contentResponse?.ok ? await contentResponse.text() : undefined;
+
   const metadata = yaml.load(text) as GepMetadata | null;
   if (!metadata || typeof metadata.number === 'undefined' || !metadata.name) {
     throw new Error(`Invalid GEP metadata at ${path}`);
@@ -87,6 +92,7 @@ export async function fetchGepYaml(path: string): Promise<Gep> {
     ...metadata,
     path,
     githubUrl: `https://github.com/kubernetes-sigs/gateway-api/tree/main/${dirPath}`,
+    ...(content !== undefined ? { content } : {}),
   };
 }
 

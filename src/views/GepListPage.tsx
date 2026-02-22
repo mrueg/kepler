@@ -142,7 +142,7 @@ function GepTable({
 
 interface GepFilters {
   query: string;
-  status: string;
+  status: string[];
   bookmarked: boolean;
 }
 
@@ -153,7 +153,7 @@ export function GepListPage() {
   const { bookmarks, toggleBookmark, isBookmarked } = useGepBookmarks();
   const [filters, setFilters] = useState<GepFilters>({
     query: searchParams.get('q') ?? '',
-    status: searchParams.get('status') ?? '',
+    status: searchParams.get('status')?.split(',').filter(Boolean) ?? [],
     bookmarked: false,
   });
   const [page, setPage] = useState(() => {
@@ -165,7 +165,7 @@ export function GepListPage() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (filters.query) params.set('q', filters.query);
-    if (filters.status) params.set('status', filters.status);
+    if (filters.status.length) params.set('status', filters.status.join(','));
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
     const newSearch = qs ? `?${qs}` : '';
@@ -186,11 +186,12 @@ export function GepListPage() {
         q &&
         !gep.name?.toLowerCase().includes(q) &&
         !String(gep.number).includes(q) &&
-        !gep.authors?.some((a) => a.toLowerCase().includes(q))
+        !gep.authors?.some((a) => a.toLowerCase().includes(q)) &&
+        !gep.content?.toLowerCase().includes(q)
       ) {
         return false;
       }
-      if (filters.status && gep.status !== filters.status) return false;
+      if (filters.status.length && !filters.status.includes(gep.status ?? '')) return false;
       if (filters.bookmarked && !isBookmarked(String(gep.number))) return false;
       return true;
     });
@@ -203,10 +204,10 @@ export function GepListPage() {
     currentPage * PAGE_SIZE,
   );
 
-  const hasFilters = filters.query || filters.status || filters.bookmarked;
+  const hasFilters = filters.query || filters.status.length > 0 || filters.bookmarked;
 
   function handleClear() {
-    setFilters({ query: '', status: '', bookmarked: false });
+    setFilters({ query: '', status: [], bookmarked: false });
     setPage(1);
   }
 
@@ -216,21 +217,30 @@ export function GepListPage() {
         <input
           className="search-input"
           type="search"
-          placeholder="Search GEPs by number, name, or author…"
+          placeholder="Search GEPs by number, name, author, or content…"
           value={filters.query}
           onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
         />
         <div className="filter-selects">
-          <select
-            className="filter-select"
-            value={filters.status}
-            onChange={(e) => { setFilters((f) => ({ ...f, status: e.target.value })); setPage(1); }}
-          >
-            <option value="">All statuses</option>
-            {statuses.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+        <div className="filter-group">
+            <label className="filter-label">Status</label>
+            <select
+              className="filter-select filter-select--multi"
+              multiple
+              size={4}
+              value={filters.status}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+                setFilters((f) => ({ ...f, status: selected }));
+                setPage(1);
+              }}
+              aria-label="Filter by status (hold Ctrl/Cmd to select multiple)"
+            >
+              {statuses.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
           {hasFilters && (
             <button className="clear-btn" onClick={handleClear}>
               Clear
