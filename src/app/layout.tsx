@@ -37,6 +37,9 @@ export default function RootLayout({
               <Link href="/gep" className="header-nav-link">
                 GEPs
               </Link>
+              <Link href="/release" className="header-nav-link">
+                Release
+              </Link>
               <Link href="/stats" className="header-nav-link">
                 Stats
               </Link>
