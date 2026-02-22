@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import type { KepStatus, KepStage } from '../types/kep';
 
 export interface Filters {
@@ -28,6 +29,135 @@ const STATUSES: KepStatus[] = [
 
 const STAGES: KepStage[] = ['pre-alpha', 'alpha', 'beta', 'stable'];
 
+interface CheckboxDropdownProps {
+  label: string;
+  items: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  renderItem?: (item: string) => string;
+}
+
+function formatSigDisplayName(sig: string): string {
+  return sig
+    .replace(/^sig-/, 'SIG ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function CheckboxDropdown({
+  label,
+  items,
+  selected,
+  onChange,
+  renderItem,
+}: CheckboxDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [allUnchecked, setAllUnchecked] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  function handleToggleOpen() {
+    // When opening with no active filter, reset to "all checked" visual state
+    if (!open && selected.length === 0) setAllUnchecked(false);
+    setOpen((o) => !o);
+  }
+
+  function isChecked(item: string): boolean {
+    if (allUnchecked) return false;
+    if (selected.length === 0) return true;
+    return selected.includes(item);
+  }
+
+  function toggle(item: string) {
+    let currentlyChecked: string[];
+    if (allUnchecked) {
+      currentlyChecked = [];
+    } else if (selected.length === 0) {
+      currentlyChecked = items;
+    } else {
+      currentlyChecked = selected;
+    }
+    let next: string[];
+    if (currentlyChecked.includes(item)) {
+      next = currentlyChecked.filter((i) => i !== item);
+    } else {
+      next = [...currentlyChecked, item];
+    }
+    setAllUnchecked(false);
+    onChange(next.length === items.length ? [] : next);
+  }
+
+  function selectAll() {
+    setAllUnchecked(false);
+    onChange([]);
+  }
+
+  function deselectAll() {
+    setAllUnchecked(true);
+    onChange([]);
+  }
+
+  const isFiltered = selected.length > 0;
+  const displayLabel = isFiltered ? `${label} (${selected.length})` : label;
+
+  return (
+    <div className="checkbox-dropdown" ref={ref}>
+      <button
+        className={`checkbox-dropdown-btn${isFiltered ? ' checkbox-dropdown-btn--active' : ''}`}
+        onClick={() => handleToggleOpen()}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        type="button"
+      >
+        {displayLabel}
+        <span className="checkbox-dropdown-arrow" aria-hidden="true">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="checkbox-dropdown-panel" role="listbox" aria-multiselectable="true">
+          <div className="checkbox-dropdown-actions">
+            <button
+              className="checkbox-dropdown-action-btn"
+              onClick={selectAll}
+              type="button"
+            >
+              Select All
+            </button>
+            <button
+              className="checkbox-dropdown-action-btn"
+              onClick={deselectAll}
+              type="button"
+            >
+              Deselect All
+            </button>
+          </div>
+          <div className="checkbox-dropdown-list">
+            {items.map((item) => (
+              <label key={item} className="checkbox-dropdown-item">
+                <input
+                  type="checkbox"
+                  checked={isChecked(item)}
+                  onChange={() => toggle(item)}
+                />
+                <span>{renderItem ? renderItem(item) : item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SearchAndFilter({
   filters,
   sigs,
@@ -57,45 +187,21 @@ export function SearchAndFilter({
         aria-label="Search KEPs"
       />
       <div className="filter-selects">
-        <div className="filter-group">
-          <label className="filter-label">SIG</label>
-          <select
-            className="filter-select filter-select--multi"
-            multiple
-            size={4}
-            value={filters.sig}
-            onChange={(e) =>
-              update({ sig: Array.from(e.target.selectedOptions, (o) => o.value) })
-            }
-            aria-label="Filter by SIG (hold Ctrl/Cmd to select multiple)"
-          >
-            {sigs.map((sig) => (
-              <option key={sig} value={sig}>
-                {sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CheckboxDropdown
+          label="SIG"
+          items={sigs}
+          selected={filters.sig}
+          onChange={(sig) => update({ sig })}
+          renderItem={formatSigDisplayName}
+        />
 
-        <div className="filter-group">
-          <label className="filter-label">Status</label>
-          <select
-            className="filter-select filter-select--multi"
-            multiple
-            size={4}
-            value={filters.status}
-            onChange={(e) =>
-              update({ status: Array.from(e.target.selectedOptions, (o) => o.value) })
-            }
-            aria-label="Filter by status (hold Ctrl/Cmd to select multiple)"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CheckboxDropdown
+          label="Status"
+          items={STATUSES}
+          selected={filters.status}
+          onChange={(status) => update({ status })}
+          renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
+        />
 
         <select
           className="filter-select"

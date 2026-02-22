@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useGeps } from '../hooks/useGeps';
 import { useGepBookmarks } from '../hooks/useGepBookmarks';
 import { LoadingBar } from '../components/LoadingBar';
+import { CheckboxDropdown } from '../components/SearchAndFilter';
 import type { Gep, GepStatus } from '../types/gep';
 
 const PAGE_SIZE = 48;
@@ -222,25 +223,12 @@ export function GepListPage() {
           onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
         />
         <div className="filter-selects">
-        <div className="filter-group">
-            <label className="filter-label">Status</label>
-            <select
-              className="filter-select filter-select--multi"
-              multiple
-              size={4}
-              value={filters.status}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, (o) => o.value);
-                setFilters((f) => ({ ...f, status: selected }));
-                setPage(1);
-              }}
-              aria-label="Filter by status (hold Ctrl/Cmd to select multiple)"
-            >
-              {statuses.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          <CheckboxDropdown
+            label="Status"
+            items={statuses as string[]}
+            selected={filters.status}
+            onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
+          />
           {hasFilters && (
             <button className="clear-btn" onClick={handleClear}>
               Clear
