@@ -4,7 +4,7 @@ import type { Kep, KepMetadata } from '../types/kep';
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes/enhancements/master';
 const GITHUB_API_BASE = 'https://api.github.com';
-const CACHE_KEY_KEPS = 'kepler_keps_v2';
+const CACHE_KEY_KEPS = 'kepler_keps_v3';
 const CACHE_KEY_TREE = 'kepler_tree_v2';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_KEPS = 6 * 60 * 60 * 1000; // 6 hours
@@ -70,11 +70,17 @@ export async function fetchKepPaths(): Promise<string[]> {
 }
 
 export async function fetchKepYaml(path: string): Promise<Kep> {
-  const response = await fetch(`${GITHUB_RAW_BASE}/${path}`);
-  if (!response.ok)
-    throw new Error(`Failed to fetch ${path}: ${response.status}`);
+  const [yamlResponse, readmeResponse] = await Promise.all([
+    fetch(`${GITHUB_RAW_BASE}/${path}`),
+    fetch(`${GITHUB_RAW_BASE}/${path.replace('/kep.yaml', '/README.md')}`).catch(() => null),
+  ]);
+  if (!yamlResponse.ok)
+    throw new Error(`Failed to fetch ${path}: ${yamlResponse.status}`);
 
-  const text = await response.text();
+  const text = await yamlResponse.text();
+  const readmeText = readmeResponse?.ok ? await readmeResponse.text() : undefined;
+  const readme = readmeText ? readmeText.slice(0, 5000) : undefined;
+
   const metadata = (yaml.load(text) as KepMetadata) || {};
   const pathInfo = parseKepPath(path)!;
   const dirPath = path.replace('/kep.yaml', '');
@@ -85,6 +91,7 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
     ...pathInfo,
     title: metadata.title || `KEP-${pathInfo.number}`,
     githubUrl: `https://github.com/kubernetes/enhancements/tree/master/${dirPath}`,
+    ...(readme !== undefined ? { readme } : {}),
   };
 }
 

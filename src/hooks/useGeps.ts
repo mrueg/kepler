@@ -52,7 +52,7 @@ export function useGeps(): UseGepsResult {
   }, [version]);
 
   const reload = useCallback(() => {
-    localStorage.removeItem('kepler_geps_v1');
+    localStorage.removeItem('kepler_geps_v2');
     localStorage.removeItem('kepler_gep_tree_v1');
     setVersion((v) => v + 1);
   }, []);

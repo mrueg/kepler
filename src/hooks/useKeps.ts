@@ -54,7 +54,7 @@ export function useKeps(): UseKepsResult {
 
   const reload = useCallback(() => {
     // Clear cache
-    localStorage.removeItem('kepler_keps_v2');
+    localStorage.removeItem('kepler_keps_v3');
     localStorage.removeItem('kepler_tree_v2');
     setVersion((v) => v + 1);
   }, []);

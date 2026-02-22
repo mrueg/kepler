@@ -150,6 +150,33 @@ a:hover { text-decoration: underline; }
 }
 .filter-select:focus { border-color: var(--accent); }
 
+.filter-select--multi {
+  min-height: 90px;
+  height: auto;
+  padding: 4px 6px;
+}
+.filter-select--multi option {
+  padding: 3px 6px;
+  border-radius: 3px;
+}
+.filter-select--multi option:checked {
+  background: var(--accent);
+  color: #fff;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.filter-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
 .clear-btn {
   padding: 7px 14px;
   border: 1px solid var(--border);

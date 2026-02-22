@@ -34,4 +34,6 @@ export interface GepMetadata {
 export interface Gep extends GepMetadata {
   path: string;
   githubUrl: string;
+  // Full body text for full-text search
+  content?: string;
 }

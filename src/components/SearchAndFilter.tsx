@@ -2,8 +2,8 @@ import type { KepStatus, KepStage } from '../types/kep';
 
 export interface Filters {
   query: string;
-  sig: string;
-  status: string;
+  sig: string[];
+  status: string[];
   stage: string;
   stale: boolean;
   bookmarked: boolean;
@@ -38,44 +38,64 @@ export function SearchAndFilter({
     onChange({ ...filters, ...patch });
   }
 
+  const hasFilters =
+    filters.query ||
+    filters.sig.length > 0 ||
+    filters.status.length > 0 ||
+    filters.stage ||
+    filters.stale ||
+    filters.bookmarked;
+
   return (
     <div className="search-filter-bar">
       <input
         type="search"
         className="search-input"
-        placeholder="Search by title, KEP number, or author…"
+        placeholder="Search by title, number, author, or README content…"
         value={filters.query}
         onChange={(e) => update({ query: e.target.value })}
         aria-label="Search KEPs"
       />
       <div className="filter-selects">
-        <select
-          className="filter-select"
-          value={filters.sig}
-          onChange={(e) => update({ sig: e.target.value })}
-          aria-label="Filter by SIG"
-        >
-          <option value="">All SIGs</option>
-          {sigs.map((sig) => (
-            <option key={sig} value={sig}>
-              {sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ')}
-            </option>
-          ))}
-        </select>
+        <div className="filter-group">
+          <label className="filter-label">SIG</label>
+          <select
+            className="filter-select filter-select--multi"
+            multiple
+            size={4}
+            value={filters.sig}
+            onChange={(e) =>
+              update({ sig: Array.from(e.target.selectedOptions, (o) => o.value) })
+            }
+            aria-label="Filter by SIG (hold Ctrl/Cmd to select multiple)"
+          >
+            {sigs.map((sig) => (
+              <option key={sig} value={sig}>
+                {sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ')}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <select
-          className="filter-select"
-          value={filters.status}
-          onChange={(e) => update({ status: e.target.value })}
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        <div className="filter-group">
+          <label className="filter-label">Status</label>
+          <select
+            className="filter-select filter-select--multi"
+            multiple
+            size={4}
+            value={filters.status}
+            onChange={(e) =>
+              update({ status: Array.from(e.target.selectedOptions, (o) => o.value) })
+            }
+            aria-label="Filter by status (hold Ctrl/Cmd to select multiple)"
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <select
           className="filter-select"
@@ -102,11 +122,11 @@ export function SearchAndFilter({
           Stale only
         </label>
 
-        {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) && (
+        {hasFilters && (
           <button
             className="clear-btn"
             onClick={() =>
-              onChange({ query: '', sig: '', status: '', stage: '', stale: false, bookmarked: false })
+              onChange({ query: '', sig: [], status: [], stage: '', stale: false, bookmarked: false })
             }
           >
             Clear
