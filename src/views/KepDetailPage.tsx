@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs } from '../api/github';
+import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs, CACHE_KEY_KEPS, CACHE_KEY_TREE } from '../api/github';
 import type { Kep } from '../types/kep';
 import type { PRInfo } from '../api/github';
 import { StatusBadge, StageBadge, StaleBadge } from '../components/Badges';
@@ -28,7 +28,7 @@ export function KepDetailPage({ number }: { number: string }) {
 
     async function load() {
       // Try to get from cache first
-      const cachedRaw = localStorage.getItem('kepler_keps_v3');
+      const cachedRaw = localStorage.getItem(CACHE_KEY_KEPS);
       if (cachedRaw) {
         try {
           const { data } = JSON.parse(cachedRaw) as {
@@ -49,7 +49,7 @@ export function KepDetailPage({ number }: { number: string }) {
       }
 
       // Also check tree cache
-      const treeCached = localStorage.getItem('kepler_tree_v2');
+      const treeCached = localStorage.getItem(CACHE_KEY_TREE);
       if (treeCached) {
         try {
           const { data: paths } = JSON.parse(treeCached) as {

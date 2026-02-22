@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAllKeps } from '../api/github';
+import { fetchAllKeps, CACHE_KEY_KEPS, CACHE_KEY_TREE } from '../api/github';
 import type { Kep } from '../types/kep';
 
 export interface UseKepsResult {
@@ -54,8 +54,8 @@ export function useKeps(): UseKepsResult {
 
   const reload = useCallback(() => {
     // Clear cache
-    localStorage.removeItem('kepler_keps_v3');
-    localStorage.removeItem('kepler_tree_v2');
+    localStorage.removeItem(CACHE_KEY_KEPS);
+    localStorage.removeItem(CACHE_KEY_TREE);
     setVersion((v) => v + 1);
   }, []);
 
