@@ -1013,3 +1013,44 @@ a:hover { text-decoration: underline; }
   .stats-card--wide { grid-column: auto; }
   .header-tagline { display: none; }
 }
+
+/* Milestone heatmap */
+.milestone-heatmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+
+.heatmap-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.heatmap-cell-block {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--accent);
+  transition: opacity .15s, transform .1s;
+}
+
+.heatmap-cell:hover .heatmap-cell-block {
+  transform: scale(1.1);
+}
+
+.heatmap-cell-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heatmap-cell-count {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}

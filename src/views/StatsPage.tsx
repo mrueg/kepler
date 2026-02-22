@@ -32,6 +32,33 @@ const STATUS_COLORS: Record<KepStatus, string> = {
 
 const TOP_SIGS = 20;
 
+interface HeatmapCell {
+  version: string;
+  count: number;
+}
+
+function MilestoneHeatmap({ data }: { data: HeatmapCell[] }) {
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+
+  return (
+    <div className="milestone-heatmap">
+      {data.map(({ version, count }) => {
+        const intensity = count / maxCount;
+        return (
+          <div key={version} className="heatmap-cell" title={`v${version}: ${count} KEP milestone event${count !== 1 ? 's' : ''}`}>
+            <div
+              className="heatmap-cell-block"
+              style={{ opacity: 0.15 + intensity * 0.85 }}
+            />
+            <span className="heatmap-cell-label">v{version}</span>
+            <span className="heatmap-cell-count">{count}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function StatsPage() {
   const { keps, loading, progress, error, reload } = useKeps();
 
@@ -71,6 +98,31 @@ export function StatsPage() {
     return Object.entries(counts)
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
+  }, [keps]);
+
+  const milestoneHeatmapData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    function addVersion(v: string | undefined) {
+      if (!v) return;
+      const match = v.replace(/^v/, '').match(/^(\d+\.\d+)/);
+      if (match) {
+        const ver = match[1];
+        counts[ver] = (counts[ver] ?? 0) + 1;
+      }
+    }
+    for (const kep of keps) {
+      addVersion(kep['latest-milestone']);
+      addVersion(kep.milestone?.alpha);
+      addVersion(kep.milestone?.beta);
+      addVersion(kep.milestone?.stable);
+    }
+    return Object.entries(counts)
+      .map(([version, count]) => ({ version, count }))
+      .sort((a, b) => {
+        const [aMaj, aMin] = a.version.split('.').map(Number);
+        const [bMaj, bMin] = b.version.split('.').map(Number);
+        return aMaj !== bMaj ? aMaj - bMaj : aMin - bMin;
+      });
   }, [keps]);
 
   return (
@@ -231,6 +283,13 @@ export function StatsPage() {
               </tbody>
             </table>
           </section>
+
+          {milestoneHeatmapData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">Milestone Heatmap — KEP Activity per Kubernetes Release</h2>
+              <MilestoneHeatmap data={milestoneHeatmapData} />
+            </section>
+          )}
         </div>
       )}
     </div>
