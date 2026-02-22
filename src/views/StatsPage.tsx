@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -17,8 +17,10 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { useKeps } from '../hooks/useKeps';
+import { useGeps } from '../hooks/useGeps';
 import { LoadingBar } from '../components/LoadingBar';
 import type { KepStatus } from '../types/kep';
+import type { GepStatus } from '../types/gep';
 
 const STATUS_COLORS: Record<KepStatus, string> = {
   provisional: '#e2a03f',
@@ -30,7 +32,18 @@ const STATUS_COLORS: Record<KepStatus, string> = {
   replaced: '#6e40c9',
 };
 
+const GEP_STATUS_COLORS: Record<GepStatus, string> = {
+  Memorandum: '#6e40c9',
+  Provisional: '#e2a03f',
+  Experimental: '#326ce5',
+  Standard: '#2ea043',
+  Declined: '#cf222e',
+  Deferred: '#8b949e',
+  Withdrawn: '#9a6700',
+};
+
 const TOP_SIGS = 20;
+const TOP_AUTHORS = 15;
 
 interface HeatmapCell {
   version: string;
@@ -59,7 +72,7 @@ function MilestoneHeatmap({ data }: { data: HeatmapCell[] }) {
   );
 }
 
-export function StatsPage() {
+function KepStats() {
   const { keps, loading, progress, error, reload } = useKeps();
 
   const sigData = useMemo(() => {
@@ -126,8 +139,7 @@ export function StatsPage() {
   }, [keps]);
 
   return (
-    <div className="stats-page">
-      <h1 className="stats-title">Analytics Dashboard</h1>
+    <>
       <p className="stats-subtitle">
         A high-level view of {keps.length} Kubernetes Enhancement Proposals
       </p>
@@ -292,6 +304,199 @@ export function StatsPage() {
           )}
         </div>
       )}
+    </>
+  );
+}
+
+function GepStats() {
+  const { geps, loading, progress, error, reload } = useGeps();
+
+  const statusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const gep of geps) {
+      const s = gep.status ?? 'unknown';
+      counts[s] = (counts[s] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [geps]);
+
+  const authorData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const gep of geps) {
+      for (const author of gep.authors ?? []) {
+        counts[author] = (counts[author] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .map(([author, count]) => ({ author, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, TOP_AUTHORS);
+  }, [geps]);
+
+  return (
+    <>
+      <p className="stats-subtitle">
+        A high-level view of {geps.length} Gateway API Enhancement Proposals
+      </p>
+
+      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+      {error && (
+        <div className="error-box">
+          <strong>Error loading GEPs:</strong> {error}
+          <button className="retry-btn" onClick={reload}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="stats-grid">
+          <section className="stats-card">
+            <h2 className="stats-card-title">Status Breakdown</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  dataKey="count"
+                  nameKey="status"
+                  cx="50%"
+                  cy="45%"
+                  outerRadius={100}
+                  label={({ name, percent }) =>
+                    percent && percent > 0.04
+                      ? `${name} (${(percent * 100).toFixed(0)}%)`
+                      : ''
+                  }
+                  labelLine={false}
+                >
+                  {statusData.map((entry) => (
+                    <Cell
+                      key={entry.status}
+                      fill={
+                        GEP_STATUS_COLORS[entry.status as GepStatus] ?? '#8b949e'
+                      }
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                  }}
+                  formatter={(value, name) => [value ?? 0, name]}
+                />
+                <Legend
+                  formatter={(value) => (
+                    <span style={{ color: 'var(--text)', fontSize: 12 }}>
+                      {value}
+                    </span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </section>
+
+          <section className="stats-card">
+            <h2 className="stats-card-title">Status Summary</h2>
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Count</th>
+                  <th>Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {statusData.map(({ status, count }) => (
+                  <tr key={status}>
+                    <td>
+                      <span
+                        className="stats-dot"
+                        style={{
+                          background:
+                            GEP_STATUS_COLORS[status as GepStatus] ?? '#8b949e',
+                        }}
+                      />
+                      {status}
+                    </td>
+                    <td>{count}</td>
+                    <td>{geps.length > 0 ? ((count / geps.length) * 100).toFixed(1) : '0.0'}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          {authorData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">
+                Top Authors (Top {TOP_AUTHORS})
+              </h2>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart
+                  data={authorData}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="author"
+                    tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                    angle={-40}
+                    textAnchor="end"
+                    interval={0}
+                  />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                  <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function StatsPage() {
+  const [activeTab, setActiveTab] = useState<'keps' | 'geps'>('keps');
+
+  return (
+    <div className="stats-page">
+      <h1 className="stats-title">Analytics Dashboard</h1>
+
+      <div className="stats-tabs" role="tablist">
+        <button
+          className={`stats-tab${activeTab === 'keps' ? ' stats-tab--active' : ''}`}
+          onClick={() => setActiveTab('keps')}
+          aria-selected={activeTab === 'keps'}
+          role="tab"
+          tabIndex={activeTab === 'keps' ? 0 : -1}
+        >
+          KEPs
+        </button>
+        <button
+          className={`stats-tab${activeTab === 'geps' ? ' stats-tab--active' : ''}`}
+          onClick={() => setActiveTab('geps')}
+          aria-selected={activeTab === 'geps'}
+          role="tab"
+          tabIndex={activeTab === 'geps' ? 0 : -1}
+        >
+          GEPs
+        </button>
+      </div>
+
+      {activeTab === 'keps' ? <KepStats /> : <GepStats />}
     </div>
   );
 }

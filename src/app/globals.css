@@ -1002,8 +1002,40 @@ a:hover { text-decoration: underline; }
 }
 .kep-ref-link:hover { text-decoration: underline; }
 
-.stats-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 6px; }
+.stats-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 16px; }
 .stats-subtitle { color: var(--text-secondary); margin-bottom: 28px; font-size: 0.9375rem; }
+
+.stats-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+
+.stats-tab {
+  padding: 8px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius) var(--radius) 0 0;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.stats-tab:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.stats-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: none;
+}
 
 .stats-grid {
   display: grid;
