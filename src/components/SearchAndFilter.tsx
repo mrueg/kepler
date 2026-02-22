@@ -5,7 +5,7 @@ export interface Filters {
   query: string;
   sig: string[];
   status: string[];
-  stage: string;
+  stage: string[];
   stale: boolean;
   bookmarked: boolean;
 }
@@ -172,7 +172,7 @@ export function SearchAndFilter({
     filters.query ||
     filters.sig.length > 0 ||
     filters.status.length > 0 ||
-    filters.stage ||
+    filters.stage.length > 0 ||
     filters.stale ||
     filters.bookmarked;
 
@@ -203,19 +203,13 @@ export function SearchAndFilter({
           renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
         />
 
-        <select
-          className="filter-select"
-          value={filters.stage}
-          onChange={(e) => update({ stage: e.target.value })}
-          aria-label="Filter by stage"
-        >
-          <option value="">All stages</option>
-          {STAGES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        <CheckboxDropdown
+          label="Stage"
+          items={STAGES}
+          selected={filters.stage}
+          onChange={(stage) => update({ stage })}
+          renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
+        />
 
         <label className="filter-stale-label">
           <input
@@ -232,7 +226,7 @@ export function SearchAndFilter({
           <button
             className="clear-btn"
             onClick={() =>
-              onChange({ query: '', sig: [], status: [], stage: '', stale: false, bookmarked: false })
+              onChange({ query: '', sig: [], status: [], stage: [], stale: false, bookmarked: false })
             }
           >
             Clear
