@@ -1119,3 +1119,8 @@ a:hover { text-decoration: underline; }
   color: var(--text-secondary);
   font-weight: 500;
 }
+.stats-chart-note {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
