@@ -28,7 +28,7 @@ export function KepDetailPage({ number }: { number: string }) {
 
     async function load() {
       // Try to get from cache first
-      const cachedRaw = localStorage.getItem('kepler_keps_v2');
+      const cachedRaw = localStorage.getItem('kepler_keps_v3');
       if (cachedRaw) {
         try {
           const { data } = JSON.parse(cachedRaw) as {
@@ -403,6 +403,13 @@ function KepRef({ value }: { value: string }) {
       <Link href={`/kep?number=${number}`} className="kep-ref-link">
         {value}
       </Link>
+    );
+  }
+  if (/^https?:\/\//.test(value)) {
+    return (
+      <a href={value} target="_blank" rel="noopener noreferrer" className="kep-ref-link">
+        {value}
+      </a>
     );
   }
   return <>{value}</>;
