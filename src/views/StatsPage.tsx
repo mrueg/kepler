@@ -146,6 +146,19 @@ function KepStats() {
       .sort((a, b) => a.releases - b.releases);
   }, [keps]);
 
+  const authorData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const kep of keps) {
+      for (const author of kep.authors ?? []) {
+        counts[author] = (counts[author] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .map(([author, count]) => ({ author, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, TOP_AUTHORS);
+  }, [keps]);
+
   const milestoneHeatmapData = useMemo(() => {
     const counts: Record<string, number> = {};
     function addVersion(v: string | undefined) {
@@ -399,6 +412,38 @@ function KepStats() {
                       value,
                       `KEPs (${props.payload.releases} release${props.payload.releases !== 1 ? 's' : ''})`,
                     ]}
+                  />
+                  <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
+
+          {authorData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">
+                Top Authors (Top {TOP_AUTHORS})
+              </h2>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart
+                  data={authorData}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="author"
+                    tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                    angle={-40}
+                    textAnchor="end"
+                    interval={0}
+                  />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
                   />
                   <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
                 </BarChart>
