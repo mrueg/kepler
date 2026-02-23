@@ -1346,23 +1346,3 @@ a:hover { text-decoration: underline; }
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
-
-/* PRR badges */
-.prr-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.prr-badge-approved { background: #dafbe1; color: #1a7f37; border: 1px solid #a7f3c0; }
-.prr-badge-pending  { background: #fff8c5; color: #7d4e00; border: 1px solid #fde68a; }
-
-[data-theme="dark"] .prr-badge-approved { background: #1a3a25; color: #3fb950; border-color: #2d6a3f; }
-[data-theme="dark"] .prr-badge-pending  { background: #3a2d00; color: #e3b341; border-color: #5a4500; }
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme="light"]) .prr-badge-approved { background: #1a3a25; color: #3fb950; border-color: #2d6a3f; }
-  html:not([data-theme="light"]) .prr-badge-pending  { background: #3a2d00; color: #e3b341; border-color: #5a4500; }
-}

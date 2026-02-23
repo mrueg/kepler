@@ -60,14 +60,3 @@ export function StaleBadge() {
     </span>
   );
 }
-
-export function PRRBadge({ approved }: { approved: boolean }) {
-  return (
-    <span
-      className={`prr-badge${approved ? ' prr-badge-approved' : ' prr-badge-pending'}`}
-      title={approved ? 'Production Readiness Review approved' : 'Production Readiness Review pending'}
-    >
-      {approved ? '✓ PRR Approved' : '⏳ PRR Pending'}
-    </span>
-  );
-}
