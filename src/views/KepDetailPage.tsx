@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,14 +13,46 @@ import { GitHubAvatar } from '../components/GitHubAvatar';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
 import { isStale } from '../utils/kep';
 import { useBookmarks } from '../hooks/useBookmarks';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 
 export function KepDetailPage({ number }: { number: string }) {
+  const router = useRouter();
   const [kep, setKep] = useState<Kep | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readme, setReadme] = useState<string | null>(null);
   const [prs, setPrs] = useState<PRInfo[]>([]);
   const { isBookmarked, toggleBookmark } = useBookmarks();
+
+  // Build sorted list of KEP numbers from cache for keyboard navigation
+  const getSortedKepNumbers = useCallback((): string[] => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY_KEPS);
+      if (raw) {
+        const { data } = JSON.parse(raw) as { data: Kep[]; timestamp: number };
+        return data.map((k) => k.number).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  }, []);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'b') {
+      toggleBookmark(number);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const numbers = getSortedKepNumbers();
+      const idx = numbers.indexOf(number);
+      if (idx === -1) return;
+      const nextIdx = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
+      if (nextIdx >= 0 && nextIdx < numbers.length) {
+        router.push(`/kep?number=${numbers[nextIdx]}`);
+      }
+    }
+  }, [number, toggleBookmark, getSortedKepNumbers, router]);
+
+  useKeyboardShortcut(handleKeyDown);
 
   useEffect(() => {
     if (!number) return;

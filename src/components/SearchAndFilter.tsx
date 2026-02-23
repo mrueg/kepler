@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { KepStatus, KepStage } from '../types/kep';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 
 export interface Filters {
   query: string;
@@ -164,6 +165,17 @@ export function SearchAndFilter({
   onChange,
   bookmarkCount = 0,
 }: SearchAndFilterProps) {
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const handleSlash = useCallback((e: KeyboardEvent) => {
+    if (e.key === '/') {
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+  }, []);
+
+  useKeyboardShortcut(handleSlash);
+
   function update(patch: Partial<Filters>) {
     onChange({ ...filters, ...patch });
   }
@@ -179,6 +191,7 @@ export function SearchAndFilter({
   return (
     <div className="search-filter-bar">
       <input
+        ref={searchRef}
         type="search"
         className="search-input"
         placeholder="Search by title, number, author, or README content…"
