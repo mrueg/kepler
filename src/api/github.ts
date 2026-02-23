@@ -306,6 +306,8 @@ export async function fetchAllKeps(
   }
 
   results.sort((a, b) => Number(b.number) - Number(a.number));
-  setCache(CACHE_KEY_KEPS, results);
+  // Strip readme before caching to avoid exceeding localStorage size limits
+  const kepsToCache = results.map(({ readme: _readme, ...kep }) => kep);
+  setCache(CACHE_KEY_KEPS, kepsToCache);
   return results;
 }
