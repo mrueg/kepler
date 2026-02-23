@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useGeps } from '../hooks/useGeps';
 import { useGepBookmarks } from '../hooks/useGepBookmarks';
+import { useRecentGepChanges } from '../hooks/useRecentGepChanges';
 import { LoadingBar } from '../components/LoadingBar';
 import { CheckboxDropdown } from '../components/SearchAndFilter';
 import { WhatsNew } from '../components/WhatsNew';
@@ -143,6 +144,7 @@ export function GepListPage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { geps, loading, progress, error, reload } = useGeps();
+  const { changes: recentGepChanges, loading: gitLoading } = useRecentGepChanges();
   const { bookmarks, toggleBookmark, isBookmarked } = useGepBookmarks();
   const [filters, setFilters] = useState<GepFilters>({
     query: searchParams.get('q') ?? '',
@@ -320,7 +322,7 @@ export function GepListPage() {
           )}
         </div>
 
-        <WhatsNew geps={geps} loading={loading} />
+        <WhatsNew geps={geps} recentGepChanges={recentGepChanges} loading={loading || gitLoading} />
       </div>
     </div>
   );

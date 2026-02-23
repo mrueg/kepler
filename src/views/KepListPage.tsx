@@ -9,6 +9,7 @@ import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 import { isStale } from '../utils/kep';
+import { useRecentKepChanges } from '../hooks/useRecentKepChanges';
 import { WhatsNew } from '../components/WhatsNew';
 
 const PAGE_SIZE = 48;
@@ -17,6 +18,7 @@ export function KepListPage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
+  const { changes: recentKepChanges, loading: gitLoading } = useRecentKepChanges();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
@@ -169,7 +171,7 @@ export function KepListPage() {
           )}
         </div>
 
-        <WhatsNew keps={keps} loading={loading} />
+        <WhatsNew keps={keps} recentKepChanges={recentKepChanges} loading={loading || gitLoading} />
       </div>
     </div>
   );

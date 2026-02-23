@@ -108,6 +108,70 @@ export async function fetchGepContent(gepPath: string): Promise<string | null> {
   }
 }
 
+export interface GitChange {
+  number: string;
+  date: Date;
+}
+
+export const CACHE_KEY_GEP_GIT = 'kepler_gep_git_v1';
+const CACHE_TTL_GIT = 60 * 60 * 1000; // 1 hour
+
+// Matches GEP file paths like: geps/gep-<number>/...
+const GEP_FILE_PATTERN = /^geps\/gep-(\d+)\//;
+
+/**
+ * Returns the last 10 GEPs changed in git history, most-recent first.
+ */
+export async function fetchRecentlyChangedGeps(limit = 10): Promise<GitChange[]> {
+  const cached = getCached<{ number: string; date: string }[]>(CACHE_KEY_GEP_GIT, CACHE_TTL_GIT);
+  if (cached) return cached.map((c) => ({ number: c.number, date: new Date(c.date) }));
+
+  const commitsResp = await fetch(
+    `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits?path=geps/&per_page=100`,
+  );
+  if (!commitsResp.ok) return [];
+
+  const commits = (await commitsResp.json()) as Array<{
+    sha: string;
+    commit: { author: { date: string } };
+  }>;
+
+  const seen = new Set<string>();
+  const results: GitChange[] = [];
+  const CONCURRENCY = 10;
+
+  for (let i = 0; i < commits.length && results.length < limit; i += CONCURRENCY) {
+    const batch = commits.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.allSettled(
+      batch.map(async (c) => {
+        const resp = await fetch(
+          `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${c.sha}`,
+        );
+        if (!resp.ok) return null;
+        const data = (await resp.json()) as { files: Array<{ filename: string }> };
+        return { date: new Date(c.commit.author.date), files: data.files ?? [] };
+      }),
+    );
+
+    for (const result of batchResults) {
+      if (result.status !== 'fulfilled' || !result.value) continue;
+      const { date, files } = result.value;
+      for (const file of files) {
+        const match = file.filename.match(GEP_FILE_PATTERN);
+        if (match && !seen.has(match[1])) {
+          seen.add(match[1]);
+          results.push({ number: match[1], date });
+          if (results.length >= limit) break;
+        }
+      }
+      if (results.length >= limit) break;
+    }
+  }
+
+  setCache(CACHE_KEY_GEP_GIT, results.map((r) => ({ number: r.number, date: r.date.toISOString() })));
+  return results;
+}
+
 export async function fetchAllGeps(
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<Gep[]> {

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
 import type { Gep } from '../types/gep';
+import type { GitChange } from '../api/github';
 import { StatusBadge } from './Badges';
 import { GEP_STATUS_COLORS } from '../utils/gep';
-import { getRecentKeps, daysSince } from '../utils/kep';
+import { daysSince } from '../utils/kep';
 
 const MAX_ITEMS = 10;
 const DEFAULT_STATUS_COLOR = '#8b949e';
@@ -24,19 +25,27 @@ function RelativeTime({ date }: { date: Date }) {
 interface WhatsNewProps {
   keps?: Kep[];
   geps?: Gep[];
+  recentKepChanges?: GitChange[];
+  recentGepChanges?: GitChange[];
   loading?: boolean;
 }
 
-export function WhatsNew({ keps = [], geps = [], loading = false }: WhatsNewProps) {
-  const recentKeps = getRecentKeps(keps, MAX_ITEMS);
+export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChanges, loading = false }: WhatsNewProps) {
+  const kepByNumber = new Map(keps.map((k) => [k.number, k]));
+  const gepByNumber = new Map(geps.map((g) => [String(g.number), g]));
 
-  // GEPs have no date field; show the most recently numbered ones as "new"
-  const recentGeps = [...geps]
-    .sort((a, b) => Number(b.number) - Number(a.number))
-    .slice(0, MAX_ITEMS);
+  const recentKeps = (recentKepChanges ?? [])
+    .slice(0, MAX_ITEMS)
+    .map(({ number, date }) => ({ kep: kepByNumber.get(number), date }))
+    .filter((item): item is { kep: Kep; date: Date } => item.kep !== undefined);
+
+  const recentGeps = (recentGepChanges ?? [])
+    .slice(0, MAX_ITEMS)
+    .map(({ number, date }) => ({ gep: gepByNumber.get(number), date }))
+    .filter((item): item is { gep: Gep; date: Date } => item.gep !== undefined);
 
   const hasKeps = recentKeps.length > 0;
-  const hasGeps = geps.length > 0 && recentGeps.length > 0;
+  const hasGeps = recentGeps.length > 0;
 
   if (!loading && !hasKeps && !hasGeps) return null;
 
@@ -50,7 +59,7 @@ export function WhatsNew({ keps = [], geps = [], loading = false }: WhatsNewProp
 
       {!loading && hasKeps && (
         <section className="whats-new-section">
-          <div className="whats-new-section-label">KEPs updated in the last 30 days</div>
+          <div className="whats-new-section-label">Recently changed KEPs</div>
           <ul className="whats-new-list">
             {recentKeps.map(({ kep, date }) => (
               <li key={kep.path} className="whats-new-item">
@@ -68,15 +77,11 @@ export function WhatsNew({ keps = [], geps = [], loading = false }: WhatsNewProp
         </section>
       )}
 
-      {!loading && !hasKeps && keps.length > 0 && (
-        <div className="whats-new-empty">No KEPs updated in the last 30 days.</div>
-      )}
-
       {!loading && hasGeps && (
         <section className="whats-new-section">
-          <div className="whats-new-section-label">Recently added GEPs</div>
+          <div className="whats-new-section-label">Recently changed GEPs</div>
           <ul className="whats-new-list">
-            {recentGeps.map((gep) => (
+            {recentGeps.map(({ gep, date }) => (
               <li key={gep.path} className="whats-new-item">
                 <Link href={`/gep?number=${gep.number}`} className="whats-new-link">
                   <span className="whats-new-number">GEP-{gep.number}</span>
@@ -89,6 +94,7 @@ export function WhatsNew({ keps = [], geps = [], loading = false }: WhatsNewProp
                   >
                     {gep.status}
                   </span>
+                  <RelativeTime date={date} />
                 </div>
               </li>
             ))}
