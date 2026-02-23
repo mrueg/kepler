@@ -156,6 +156,7 @@ export function GepListPage() {
     return isNaN(p) || p < 1 ? 1 : p;
   });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [activeTab, setActiveTab] = useState<'browse' | 'whats-new'>('browse');
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -210,119 +211,144 @@ export function GepListPage() {
     <div className="list-page">
       <div className="list-page-layout">
         <div className="list-page-main">
-          <div className="search-filter-bar">
-            <input
-              className="search-input"
-              type="search"
-              placeholder="Search GEPs by number, name, author, or content…"
-              value={filters.query}
-              onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
-            />
-            <div className="filter-selects">
-              <CheckboxDropdown
-                label="Status"
-                items={statuses as string[]}
-                selected={filters.status}
-                onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
-              />
-              {hasFilters && (
-                <button className="clear-btn" onClick={handleClear}>
-                  Clear
-                </button>
-              )}
-              {(bookmarks.size > 0 || filters.bookmarked) && (
-                <button
-                  className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
-                  onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
-                  aria-pressed={filters.bookmarked}
-                  title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
-                >
-                  {filters.bookmarked ? '★' : '☆'} Bookmarks
-                  {bookmarks.size > 0 && (
-                    <span className="bookmark-filter-count">{bookmarks.size}</span>
-                  )}
-                </button>
-              )}
-            </div>
+          <div className="list-page-tabs" role="tablist">
+            <button
+              className={`list-page-tab${activeTab === 'browse' ? ' list-page-tab--active' : ''}`}
+              onClick={() => setActiveTab('browse')}
+              role="tab"
+              aria-selected={activeTab === 'browse'}
+            >
+              Browse GEPs
+            </button>
+            <button
+              className={`list-page-tab${activeTab === 'whats-new' ? ' list-page-tab--active' : ''}`}
+              onClick={() => setActiveTab('whats-new')}
+              role="tab"
+              aria-selected={activeTab === 'whats-new'}
+            >
+              🆕 What&apos;s New
+            </button>
           </div>
 
-          {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-          {error && (
-            <div className="error-box">
-              <strong>Error loading GEPs:</strong> {error}
-              <button className="retry-btn" onClick={reload}>
-                Retry
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && (
-            <div className="results-header">
-              <span>
-                {filtered.length} GEP{filtered.length !== 1 ? 's' : ''}
-                {hasFilters && ` matching filters`}
-              </span>
-              <div className="view-toggle">
-                <button
-                  className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  aria-label="Grid view"
-                  aria-pressed={viewMode === 'grid'}
-                >
-                  ⊞ Grid
-                </button>
-                <button
-                  className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-                  onClick={() => setViewMode('table')}
-                  aria-label="Table view"
-                  aria-pressed={viewMode === 'table'}
-                >
-                  ☰ Table
-                </button>
-              </div>
-            </div>
-          )}
-
-          {viewMode === 'grid' ? (
-            <div className="kep-grid">
-              {pageGeps.map((gep) => (
-                <GepCard
-                  key={gep.path}
-                  gep={gep}
-                  isBookmarked={isBookmarked(String(gep.number))}
-                  onToggleBookmark={toggleBookmark}
+          {activeTab === 'browse' && (
+            <>
+              <div className="search-filter-bar">
+                <input
+                  className="search-input"
+                  type="search"
+                  placeholder="Search GEPs by number, name, author, or content…"
+                  value={filters.query}
+                  onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
                 />
-              ))}
-            </div>
-          ) : (
-            <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+                <div className="filter-selects">
+                  <CheckboxDropdown
+                    label="Status"
+                    items={statuses as string[]}
+                    selected={filters.status}
+                    onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
+                  />
+                  {hasFilters && (
+                    <button className="clear-btn" onClick={handleClear}>
+                      Clear
+                    </button>
+                  )}
+                  {(bookmarks.size > 0 || filters.bookmarked) && (
+                    <button
+                      className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
+                      onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
+                      aria-pressed={filters.bookmarked}
+                      title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
+                    >
+                      {filters.bookmarked ? '★' : '☆'} Bookmarks
+                      {bookmarks.size > 0 && (
+                        <span className="bookmark-filter-count">{bookmarks.size}</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+              {error && (
+                <div className="error-box">
+                  <strong>Error loading GEPs:</strong> {error}
+                  <button className="retry-btn" onClick={reload}>
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!loading && !error && (
+                <div className="results-header">
+                  <span>
+                    {filtered.length} GEP{filtered.length !== 1 ? 's' : ''}
+                    {hasFilters && ` matching filters`}
+                  </span>
+                  <div className="view-toggle">
+                    <button
+                      className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+                      onClick={() => setViewMode('grid')}
+                      aria-label="Grid view"
+                      aria-pressed={viewMode === 'grid'}
+                    >
+                      ⊞ Grid
+                    </button>
+                    <button
+                      className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+                      onClick={() => setViewMode('table')}
+                      aria-label="Table view"
+                      aria-pressed={viewMode === 'table'}
+                    >
+                      ☰ Table
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {viewMode === 'grid' ? (
+                <div className="kep-grid">
+                  {pageGeps.map((gep) => (
+                    <GepCard
+                      key={gep.path}
+                      gep={gep}
+                      isBookmarked={isBookmarked(String(gep.number))}
+                      onToggleBookmark={toggleBookmark}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+              )}
+
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button
+                    className="page-btn"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="page-info">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="page-btn"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="page-btn"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ← Previous
-              </button>
-              <span className="page-info">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                className="page-btn"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next →
-              </button>
-            </div>
+          {activeTab === 'whats-new' && (
+            <WhatsNew geps={geps} recentGepChanges={recentGepChanges} loading={loading || gitLoading} />
           )}
         </div>
-
-        <WhatsNew geps={geps} recentGepChanges={recentGepChanges} loading={loading || gitLoading} />
       </div>
     </div>
   );

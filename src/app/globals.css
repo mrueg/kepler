@@ -1246,7 +1246,7 @@ a:hover { text-decoration: underline; }
   color: var(--text-secondary);
   font-weight: 500;
 }
-/* What's New sidebar layout */
+/* List page layout */
 .list-page-layout {
   display: flex;
   gap: 24px;
@@ -1258,17 +1258,47 @@ a:hover { text-decoration: underline; }
   min-width: 0;
 }
 
-/* What's New sidebar */
+/* List page tabs (Browse / What's New) */
+.list-page-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+
+.list-page-tab {
+  padding: 8px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius) var(--radius) 0 0;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.list-page-tab:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.list-page-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: none;
+}
+
+/* What's New (tab panel) */
 .whats-new {
-  width: 280px;
-  flex-shrink: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow);
-  position: sticky;
-  top: 16px;
+  max-width: 560px;
 }
 
 .whats-new-title {
@@ -1482,9 +1512,5 @@ a:hover { text-decoration: underline; }
 @media (max-width: 900px) {
   .list-page-layout {
     flex-direction: column;
-  }
-  .whats-new {
-    width: 100%;
-    position: static;
   }
 }
