@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
 import { LoadingBar } from '../components/LoadingBar';
@@ -24,6 +24,15 @@ interface ReleaseGroup {
 export function ReleasePage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
+  // Keep a ref so the URL-sync effect can read the latest searchParams without
+  // listing it as a dependency (which would cause it to re-run on every
+  // navigation and create an infinite replace loop).
+  const searchParamsRef = useRef(searchParams);
+  // Update the ref after every render (effects run in order, so this runs
+  // before the URL-sync effect below when both fire in the same commit).
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  });
   const { keps, loading, progress, error, reload } = useKeps();
 
   const allVersions = useMemo(() => {
@@ -69,7 +78,7 @@ export function ReleasePage() {
 
   useEffect(() => {
     if (selectedVersion) {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsRef.current.toString());
       params.set('tab', 'release');
       params.set('v', selectedVersion);
       const newSearch = `?${params.toString()}`;
@@ -77,7 +86,7 @@ export function ReleasePage() {
         replace(newSearch, { scroll: false });
       }
     }
-  }, [selectedVersion, replace, searchParams]);
+  }, [selectedVersion, replace]);
 
   const releaseGroups = useMemo((): ReleaseGroup[] => {
     if (!selectedVersion) return [];
