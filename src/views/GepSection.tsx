@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { KepListPage } from './KepListPage';
-import { ReleasePage } from './ReleasePage';
-import { KepStats } from './StatsPage';
+import { GepListPage } from './GepListPage';
+import { GepStats } from './StatsPage';
 
-type Tab = 'list' | 'release' | 'stats';
+type Tab = 'list' | 'stats';
 
-export function KepSection() {
+export function GepSection() {
   const [activeTab, setActiveTab] = useState<Tab>('list');
 
   return (
@@ -20,16 +19,7 @@ export function KepSection() {
           aria-selected={activeTab === 'list'}
           tabIndex={activeTab === 'list' ? 0 : -1}
         >
-          KEPs
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'release' ? ' stats-tab--active' : ''}`}
-          onClick={() => setActiveTab('release')}
-          role="tab"
-          aria-selected={activeTab === 'release'}
-          tabIndex={activeTab === 'release' ? 0 : -1}
-        >
-          Release Timeline
+          GEPs
         </button>
         <button
           className={`stats-tab${activeTab === 'stats' ? ' stats-tab--active' : ''}`}
@@ -41,9 +31,8 @@ export function KepSection() {
           Stats
         </button>
       </div>
-      {activeTab === 'list' && <KepListPage />}
-      {activeTab === 'release' && <ReleasePage />}
-      {activeTab === 'stats' && <KepStats />}
+      {activeTab === 'list' && <GepListPage />}
+      {activeTab === 'stats' && <GepStats />}
     </div>
   );
 }
