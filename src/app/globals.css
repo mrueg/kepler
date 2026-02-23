@@ -373,6 +373,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  margin-left: auto;
 }
 .view-toggle-btn {
   padding: 5px 12px;

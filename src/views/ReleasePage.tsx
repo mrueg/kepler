@@ -50,7 +50,7 @@ export function ReleasePage() {
   const [manualVersion, setManualVersion] = useState<string>(
     searchParams.get('v') ?? '',
   );
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
