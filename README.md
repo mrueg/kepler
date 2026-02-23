@@ -2,7 +2,9 @@
 
 A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps) and [Gateway API Enhancement Proposals (GEPs)](https://github.com/kubernetes-sigs/gateway-api/tree/main/geps).
 
-![Kepler in action](docs/screenshot.png)
+![Kepler search page](docs/screenshot-search.png)
+
+![Kepler KEP detail](docs/screenshot.png)
 
 ## Features
 
