@@ -206,55 +206,55 @@ export function GepListPage() {
 
   return (
     <div className="list-page">
-      <div className="search-filter-bar">
-        <input
-          className="search-input"
-          type="search"
-          placeholder="Search GEPs by number, name, author, or content…"
-          value={filters.query}
-          onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
-        />
-        <div className="filter-selects">
-          <CheckboxDropdown
-            label="Status"
-            items={statuses as string[]}
-            selected={filters.status}
-            onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
-          />
-          {hasFilters && (
-            <button className="clear-btn" onClick={handleClear}>
-              Clear
-            </button>
-          )}
-          {(bookmarks.size > 0 || filters.bookmarked) && (
-            <button
-              className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
-              onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
-              aria-pressed={filters.bookmarked}
-              title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
-            >
-              {filters.bookmarked ? '★' : '☆'} Bookmarks
-              {bookmarks.size > 0 && (
-                <span className="bookmark-filter-count">{bookmarks.size}</span>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading GEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
-
       <div className="list-page-layout">
         <div className="list-page-main">
+          <div className="search-filter-bar">
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Search GEPs by number, name, author, or content…"
+              value={filters.query}
+              onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
+            />
+            <div className="filter-selects">
+              <CheckboxDropdown
+                label="Status"
+                items={statuses as string[]}
+                selected={filters.status}
+                onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
+              />
+              {hasFilters && (
+                <button className="clear-btn" onClick={handleClear}>
+                  Clear
+                </button>
+              )}
+              {(bookmarks.size > 0 || filters.bookmarked) && (
+                <button
+                  className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
+                  onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
+                  aria-pressed={filters.bookmarked}
+                  title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
+                >
+                  {filters.bookmarked ? '★' : '☆'} Bookmarks
+                  {bookmarks.size > 0 && (
+                    <span className="bookmark-filter-count">{bookmarks.size}</span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+          {error && (
+            <div className="error-box">
+              <strong>Error loading GEPs:</strong> {error}
+              <button className="retry-btn" onClick={reload}>
+                Retry
+              </button>
+            </div>
+          )}
+
           {!loading && !error && (
             <div className="results-header">
               <span>

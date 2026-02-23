@@ -88,21 +88,21 @@ export function KepListPage() {
 
   return (
     <div className="list-page">
-      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
-
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading KEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
-
       <div className="list-page-layout">
         <div className="list-page-main">
+          <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
+
+          {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+          {error && (
+            <div className="error-box">
+              <strong>Error loading KEPs:</strong> {error}
+              <button className="retry-btn" onClick={reload}>
+                Retry
+              </button>
+            </div>
+          )}
+
           {!loading && !error && (
             <div className="results-header">
               <span>
