@@ -69,14 +69,15 @@ export function ReleasePage() {
 
   useEffect(() => {
     if (selectedVersion) {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', 'release');
       params.set('v', selectedVersion);
       const newSearch = `?${params.toString()}`;
       if (typeof window !== 'undefined' && newSearch !== window.location.search) {
         replace(newSearch, { scroll: false });
       }
     }
-  }, [selectedVersion, replace]);
+  }, [selectedVersion, replace, searchParams]);
 
   const releaseGroups = useMemo((): ReleaseGroup[] => {
     if (!selectedVersion) return [];
