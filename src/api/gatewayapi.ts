@@ -203,7 +203,9 @@ export async function fetchAllGeps(
   }
 
   results.sort((a, b) => Number(b.number) - Number(a.number));
-  setCache(CACHE_KEY_GEPS, results);
+  // Strip content before caching to avoid exceeding localStorage size limits
+  const gepsToCache = results.map(({ content: _content, ...gep }) => gep);
+  setCache(CACHE_KEY_GEPS, gepsToCache);
   return results;
 }
 
