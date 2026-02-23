@@ -7,19 +7,11 @@ import { useGeps } from '../hooks/useGeps';
 import { useGepBookmarks } from '../hooks/useGepBookmarks';
 import { LoadingBar } from '../components/LoadingBar';
 import { CheckboxDropdown } from '../components/SearchAndFilter';
+import { WhatsNew } from '../components/WhatsNew';
 import type { Gep, GepStatus } from '../types/gep';
+import { GEP_STATUS_COLORS } from '../utils/gep';
 
 const PAGE_SIZE = 48;
-
-const GEP_STATUS_COLORS: Record<GepStatus, string> = {
-  Memorandum: '#6e40c9',
-  Provisional: '#e2a03f',
-  Experimental: '#326ce5',
-  Standard: '#2ea043',
-  Declined: '#cf222e',
-  Deferred: '#8b949e',
-  Withdrawn: '#9a6700',
-};
 
 function GepStatusBadge({ status }: { status?: GepStatus }) {
   if (!status) return null;
@@ -214,116 +206,122 @@ export function GepListPage() {
 
   return (
     <div className="list-page">
-      <div className="search-filter-bar">
-        <input
-          className="search-input"
-          type="search"
-          placeholder="Search GEPs by number, name, author, or content…"
-          value={filters.query}
-          onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
-        />
-        <div className="filter-selects">
-          <CheckboxDropdown
-            label="Status"
-            items={statuses as string[]}
-            selected={filters.status}
-            onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
-          />
-          {hasFilters && (
-            <button className="clear-btn" onClick={handleClear}>
-              Clear
-            </button>
-          )}
-          {(bookmarks.size > 0 || filters.bookmarked) && (
-            <button
-              className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
-              onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
-              aria-pressed={filters.bookmarked}
-              title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
-            >
-              {filters.bookmarked ? '★' : '☆'} Bookmarks
-              {bookmarks.size > 0 && (
-                <span className="bookmark-filter-count">{bookmarks.size}</span>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading GEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
-
-      {!loading && !error && (
-        <div className="results-header">
-          <span>
-            {filtered.length} GEP{filtered.length !== 1 ? 's' : ''}
-            {hasFilters && ` matching filters`}
-          </span>
-          <div className="view-toggle">
-            <button
-              className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-              aria-pressed={viewMode === 'grid'}
-            >
-              ⊞ Grid
-            </button>
-            <button
-              className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-              onClick={() => setViewMode('table')}
-              aria-label="Table view"
-              aria-pressed={viewMode === 'table'}
-            >
-              ☰ Table
-            </button>
-          </div>
-        </div>
-      )}
-
-      {viewMode === 'grid' ? (
-        <div className="kep-grid">
-          {pageGeps.map((gep) => (
-            <GepCard
-              key={gep.path}
-              gep={gep}
-              isBookmarked={isBookmarked(String(gep.number))}
-              onToggleBookmark={toggleBookmark}
+      <div className="list-page-layout">
+        <div className="list-page-main">
+          <div className="search-filter-bar">
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Search GEPs by number, name, author, or content…"
+              value={filters.query}
+              onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
             />
-          ))}
-        </div>
-      ) : (
-        <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
-      )}
+            <div className="filter-selects">
+              <CheckboxDropdown
+                label="Status"
+                items={statuses as string[]}
+                selected={filters.status}
+                onChange={(status) => { setFilters((f) => ({ ...f, status })); setPage(1); }}
+              />
+              {hasFilters && (
+                <button className="clear-btn" onClick={handleClear}>
+                  Clear
+                </button>
+              )}
+              {(bookmarks.size > 0 || filters.bookmarked) && (
+                <button
+                  className={`bookmark-filter-btn${filters.bookmarked ? ' bookmark-filter-btn-active' : ''}`}
+                  onClick={() => { setFilters((f) => ({ ...f, bookmarked: !f.bookmarked })); setPage(1); }}
+                  aria-pressed={filters.bookmarked}
+                  title={filters.bookmarked ? 'Show all GEPs' : 'Show bookmarked GEPs only'}
+                >
+                  {filters.bookmarked ? '★' : '☆'} Bookmarks
+                  {bookmarks.size > 0 && (
+                    <span className="bookmark-filter-count">{bookmarks.size}</span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="page-btn"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            ← Previous
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next →
-          </button>
+          {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+          {error && (
+            <div className="error-box">
+              <strong>Error loading GEPs:</strong> {error}
+              <button className="retry-btn" onClick={reload}>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="results-header">
+              <span>
+                {filtered.length} GEP{filtered.length !== 1 ? 's' : ''}
+                {hasFilters && ` matching filters`}
+              </span>
+              <div className="view-toggle">
+                <button
+                  className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === 'grid'}
+                >
+                  ⊞ Grid
+                </button>
+                <button
+                  className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+                  onClick={() => setViewMode('table')}
+                  aria-label="Table view"
+                  aria-pressed={viewMode === 'table'}
+                >
+                  ☰ Table
+                </button>
+              </div>
+            </div>
+          )}
+
+          {viewMode === 'grid' ? (
+            <div className="kep-grid">
+              {pageGeps.map((gep) => (
+                <GepCard
+                  key={gep.path}
+                  gep={gep}
+                  isBookmarked={isBookmarked(String(gep.number))}
+                  onToggleBookmark={toggleBookmark}
+                />
+              ))}
+            </div>
+          ) : (
+            <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+          )}
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                ← Previous
+              </button>
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        <WhatsNew geps={geps} loading={loading} />
+      </div>
     </div>
   );
 }
