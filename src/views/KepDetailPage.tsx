@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { fetchKepYaml, fetchKepReadme, parseKepPath, fetchEnhancementPRs, fetchKepChangelog, CACHE_KEY_KEPS, CACHE_KEY_TREE } from '../api/github';
 import type { Kep } from '../types/kep';
 import type { PRInfo, ChangelogEntry } from '../api/github';
-import { StatusBadge, StageBadge, StaleBadge, PRRBadge } from '../components/Badges';
+import { StatusBadge, StageBadge, StaleBadge } from '../components/Badges';
 import { GitHubAvatar } from '../components/GitHubAvatar';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
 import { ChangelogTimeline } from '../components/ChangelogTimeline';
@@ -156,9 +156,6 @@ export function KepDetailPage({ number }: { number: string }) {
           <StatusBadge status={kep.status} />
           <StageBadge stage={kep.stage} />
           {isStale(kep) && <StaleBadge />}
-          {kep['prr-approvers'] && kep['prr-approvers'].length > 0 && (
-            <PRRBadge approved={true} />
-          )}
           <button
             className={`bookmark-star bookmark-star-detail${isBookmarked(kep.number) ? ' bookmark-star-active' : ''}`}
             onClick={() => toggleBookmark(kep.number)}
