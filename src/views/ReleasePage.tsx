@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
 import { LoadingBar } from '../components/LoadingBar';
 import { KepCard } from '../components/KepCard';
-import { KepTable } from '../components/KepTable';
+import { KepTable, type SortKey } from '../components/KepTable';
 import type { Kep } from '../types/kep';
 
 function normalizeVersion(v: string | undefined): string | null {
@@ -51,6 +51,17 @@ export function ReleasePage() {
     searchParams.get('v') ?? '',
   );
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
 
   // Derive the effective version: use manual selection if set, otherwise default to latest
   const selectedVersion =
@@ -110,6 +121,35 @@ export function ReleasePage() {
     }
     return seen.size;
   }, [releaseGroups, selectedVersion]);
+
+  const sortedGroups = useMemo(() => {
+    if (!sortKey) return releaseGroups;
+    return releaseGroups.map((group) => ({
+      ...group,
+      keps: [...group.keps].sort((a, b) => {
+        let av = '';
+        let bv = '';
+        if (sortKey === 'title') {
+          av = (a.title || a.slug).toLowerCase();
+          bv = (b.title || b.slug).toLowerCase();
+        } else if (sortKey === 'sig') {
+          av = a.sig.toLowerCase();
+          bv = b.sig.toLowerCase();
+        } else if (sortKey === 'status') {
+          av = (a.status ?? '').toLowerCase();
+          bv = (b.status ?? '').toLowerCase();
+        } else if (sortKey === 'stage') {
+          av = (a.stage ?? '').toLowerCase();
+          bv = (b.stage ?? '').toLowerCase();
+        } else if (sortKey === 'last-updated') {
+          av = (a['last-updated'] ?? a['creation-date'] ?? '').toLowerCase();
+          bv = (b['last-updated'] ?? b['creation-date'] ?? '').toLowerCase();
+        }
+        const cmp = av.localeCompare(bv);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }),
+    }));
+  }, [releaseGroups, sortKey, sortDir]);
 
   return (
     <div className="release-page">
@@ -180,7 +220,7 @@ export function ReleasePage() {
               No KEP milestone activity found for v{selectedVersion}.
             </p>
           ) : (
-            releaseGroups.map((group) => (
+            sortedGroups.map((group) => (
               <section key={group.label} className="release-group">
                 <div className="release-group-header">
                   <h2 className="release-group-title">
@@ -202,7 +242,7 @@ export function ReleasePage() {
                     ))}
                   </div>
                 ) : (
-                  <KepTable keps={group.keps} />
+                  <KepTable keps={group.keps} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 )}
               </section>
             ))

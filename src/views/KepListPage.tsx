@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { KepCard } from '../components/KepCard';
-import { KepTable } from '../components/KepTable';
+import { KepTable, type SortKey } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 import { isStale } from '../utils/kep';
@@ -30,6 +30,17 @@ export function KepListPage() {
     return isNaN(p) || p < 1 ? 1 : p;
   });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -73,9 +84,35 @@ export function KepListPage() {
     });
   }, [keps, filters, isBookmarked]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      let av = '';
+      let bv = '';
+      if (sortKey === 'title') {
+        av = (a.title || a.slug).toLowerCase();
+        bv = (b.title || b.slug).toLowerCase();
+      } else if (sortKey === 'sig') {
+        av = a.sig.toLowerCase();
+        bv = b.sig.toLowerCase();
+      } else if (sortKey === 'status') {
+        av = (a.status ?? '').toLowerCase();
+        bv = (b.status ?? '').toLowerCase();
+      } else if (sortKey === 'stage') {
+        av = (a.stage ?? '').toLowerCase();
+        bv = (b.stage ?? '').toLowerCase();
+      } else if (sortKey === 'last-updated') {
+        av = (a['last-updated'] ?? a['creation-date'] ?? '').toLowerCase();
+        bv = (b['last-updated'] ?? b['creation-date'] ?? '').toLowerCase();
+      }
+      const cmp = av.localeCompare(bv);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageKeps = filtered.slice(
+  const pageKeps = sorted.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
@@ -140,7 +177,7 @@ export function KepListPage() {
               ))}
             </div>
           ) : (
-            <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+            <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           )}
 
           {totalPages > 1 && (
