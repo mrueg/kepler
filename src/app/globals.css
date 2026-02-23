@@ -1318,6 +1318,58 @@ a:hover { text-decoration: underline; }
   color: var(--text);
   transition: color .15s;
 }
+
+/* Release page */
+.release-page {
+  width: 100%;
+}
+
+.release-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.release-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  font-size: 0.9375rem;
+}
+
+.release-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.release-version-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.release-version-select {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  min-width: 120px;
+  transition: border-color .15s;
+}
+.release-version-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(50,108,229,.15); }
+
+.release-summary {
+  font-size: 0.875rem;
+
 .whats-new-link:hover { color: var(--accent); text-decoration: none; }
 
 .whats-new-number {
@@ -1352,6 +1404,69 @@ a:hover { text-decoration: underline; }
   font-weight: 500;
 }
 
+.release-group {
+  margin-bottom: 32px;
+}
+
+.release-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.release-group-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.release-stage-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.release-stage-badge--stable {
+  background: #10b98122;
+  color: #10b981;
+  border: 1px solid #10b98144;
+}
+
+.release-stage-badge--beta {
+  background: #3b82f622;
+  color: #3b82f6;
+  border: 1px solid #3b82f644;
+}
+
+.release-stage-badge--alpha {
+  background: #f59e0b22;
+  color: #f59e0b;
+  border: 1px solid #f59e0b44;
+}
+
+.release-group-count {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.release-group-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.release-empty {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  padding: 32px 0;
+  text-align: center;
+}
+
 .whats-new-loading {
   font-size: 0.82rem;
   color: var(--text-secondary);
@@ -1373,5 +1488,3 @@ a:hover { text-decoration: underline; }
     position: static;
   }
 }
-
-
