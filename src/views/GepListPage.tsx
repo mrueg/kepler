@@ -214,7 +214,7 @@ export function GepListPage() {
             <input
               className="search-input"
               type="search"
-              placeholder="Search GEPs by number, name, author, or content…"
+              placeholder="Search GEPs by number, name, or author…"
               value={filters.query}
               onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
             />
