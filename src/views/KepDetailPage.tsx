@@ -449,13 +449,35 @@ function extractKepNumber(ref: string): string | null {
   return null;
 }
 
+function getKepFromCache(number: string): Kep | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_KEPS);
+    if (raw) {
+      const { data } = JSON.parse(raw) as { data: Kep[]; timestamp: number };
+      return data.find((k) => k.number === number) ?? null;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 function KepRef({ value }: { value: string }) {
   const number = extractKepNumber(value);
   if (number) {
+    const cached = getKepFromCache(number);
     return (
-      <Link href={`/kep?number=${number}`} className="kep-ref-link">
-        {value}
-      </Link>
+      <span className="kep-ref-item">
+        <Link href={`/kep?number=${number}`} className="kep-ref-link">
+          KEP-{number}{cached?.title ? `: ${cached.title}` : ''}
+        </Link>
+        {cached?.status && (
+          <StatusBadge status={cached.status} />
+        )}
+        {cached?.stage && (
+          <StageBadge stage={cached.stage} />
+        )}
+      </span>
     );
   }
   if (/^https?:\/\//.test(value)) {

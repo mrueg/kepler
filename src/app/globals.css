@@ -1123,6 +1123,7 @@ a:hover { text-decoration: underline; }
 .gep-ref-link:hover { text-decoration: underline; }
 
 /* KEP ref link */
+.kep-ref-item { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .kep-ref-link {
   color: var(--accent);
   font-size: 0.875rem;
