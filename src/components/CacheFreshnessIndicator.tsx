@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useSyncExternalStore, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CACHE_KEY_KEPS } from '../api/github';
 import { CACHE_KEY_GEPS } from '../api/gatewayapi';
 
@@ -25,15 +25,6 @@ function getElapsedMs(): number | null {
   }
 }
 
-function getServerSnapshot(): null {
-  return null;
-}
-
-function subscribe(callback: () => void): () => void {
-  const interval = setInterval(callback, 60_000);
-  return () => clearInterval(interval);
-}
-
 function formatTimeAgo(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s ago`;
@@ -46,8 +37,14 @@ function formatTimeAgo(ms: number): string {
 }
 
 export function CacheFreshnessIndicator() {
-  const elapsedMs = useSyncExternalStore(subscribe, getElapsedMs, getServerSnapshot);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    setElapsedMs(getElapsedMs());
+    const interval = setInterval(() => setElapsedMs(getElapsedMs()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     try {
