@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useKeps } from '../hooks/useKeps';
 import { LoadingBar } from '../components/LoadingBar';
+import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
 import type { Kep } from '../types/kep';
 
@@ -49,6 +50,7 @@ export function ReleasePage() {
   const [manualVersion, setManualVersion] = useState<string>(
     searchParams.get('v') ?? '',
   );
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Derive the effective version: use manual selection if set, otherwise default to latest
   const selectedVersion =
@@ -140,6 +142,24 @@ export function ReleasePage() {
             {totalKeps} KEP{totalKeps !== 1 ? 's' : ''} with milestone activity in v{selectedVersion}
           </span>
         )}
+        <div className="view-toggle">
+          <button
+            className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+            onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
+            aria-pressed={viewMode === 'grid'}
+          >
+            ⊞ Grid
+          </button>
+          <button
+            className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+            onClick={() => setViewMode('table')}
+            aria-label="Table view"
+            aria-pressed={viewMode === 'table'}
+          >
+            ☰ Table
+          </button>
+        </div>
       </div>
 
       {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
@@ -175,7 +195,15 @@ export function ReleasePage() {
                   </span>
                 </div>
                 <p className="release-group-desc">{group.description}</p>
-                <KepTable keps={group.keps} />
+                {viewMode === 'grid' ? (
+                  <div className="kep-grid">
+                    {group.keps.map((kep) => (
+                      <KepCard key={kep.path} kep={kep} />
+                    ))}
+                  </div>
+                ) : (
+                  <KepTable keps={group.keps} />
+                )}
               </section>
             ))
           )}
