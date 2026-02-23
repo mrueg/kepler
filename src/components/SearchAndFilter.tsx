@@ -7,6 +7,7 @@ export interface Filters {
   sig: string[];
   status: string[];
   stage: string[];
+  milestone: string;
   stale: boolean;
   bookmarked: boolean;
 }
@@ -14,6 +15,7 @@ export interface Filters {
 interface SearchAndFilterProps {
   filters: Filters;
   sigs: string[];
+  milestones: string[];
   onChange: (filters: Filters) => void;
   bookmarkCount?: number;
 }
@@ -162,6 +164,7 @@ export function CheckboxDropdown({
 export function SearchAndFilter({
   filters,
   sigs,
+  milestones,
   onChange,
   bookmarkCount = 0,
 }: SearchAndFilterProps) {
@@ -185,6 +188,7 @@ export function SearchAndFilter({
     filters.sig.length > 0 ||
     filters.status.length > 0 ||
     filters.stage.length > 0 ||
+    filters.milestone ||
     filters.stale ||
     filters.bookmarked;
 
@@ -224,6 +228,20 @@ export function SearchAndFilter({
           renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
         />
 
+        {milestones.length > 0 && (
+          <select
+            className={`milestone-filter-select${filters.milestone ? ' milestone-filter-select--active' : ''}`}
+            value={filters.milestone}
+            onChange={(e) => update({ milestone: e.target.value })}
+            aria-label="Filter by milestone"
+          >
+            <option value="">Milestone</option>
+            {milestones.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        )}
+
         <label className="filter-stale-label">
           <input
             type="checkbox"
@@ -239,7 +257,7 @@ export function SearchAndFilter({
           <button
             className="clear-btn"
             onClick={() =>
-              onChange({ query: '', sig: [], status: [], stage: [], stale: false, bookmarked: false })
+              onChange({ query: '', sig: [], status: [], stage: [], milestone: '', stale: false, bookmarked: false })
             }
           >
             Clear
