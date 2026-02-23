@@ -51,7 +51,7 @@ export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChan
 
   return (
     <aside className="whats-new">
-      <h2 className="whats-new-title">🆕 What&apos;s New</h2>
+      <h2 className="whats-new-title">What&apos;s New</h2>
 
       {loading && (
         <div className="whats-new-loading">Loading…</div>

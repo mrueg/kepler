@@ -9,8 +9,6 @@ import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 import { isStale } from '../utils/kep';
-import { useRecentKepChanges } from '../hooks/useRecentKepChanges';
-import { WhatsNew } from '../components/WhatsNew';
 
 const PAGE_SIZE = 48;
 
@@ -18,7 +16,6 @@ export function KepListPage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
-  const { changes: recentKepChanges, loading: gitLoading } = useRecentKepChanges();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
@@ -90,9 +87,7 @@ export function KepListPage() {
 
   return (
     <div className="list-page">
-      <div className="list-page-layout">
-        <div className="list-page-main">
-          <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
+      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
 
           {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
 
@@ -169,10 +164,6 @@ export function KepListPage() {
               </button>
             </div>
           )}
-        </div>
-
-        <WhatsNew keps={keps} recentKepChanges={recentKepChanges} loading={loading || gitLoading} />
-      </div>
     </div>
   );
 }
