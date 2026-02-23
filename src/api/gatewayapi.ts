@@ -1,5 +1,6 @@
 import yaml from 'js-yaml';
 import type { Gep, GepMetadata } from '../types/gep';
+import { githubFetch } from '../utils/githubFetch';
 
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main';
@@ -48,7 +49,7 @@ export async function fetchGepPaths(): Promise<string[]> {
   const cached = getCached<string[]>(CACHE_KEY_GEP_TREE, CACHE_TTL_TREE);
   if (cached) return cached;
 
-  const response = await fetch(
+  const response = await githubFetch(
     `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/git/trees/HEAD?recursive=1`,
   );
   if (!response.ok)
@@ -73,8 +74,8 @@ export async function fetchGepPaths(): Promise<string[]> {
 
 export async function fetchGepYaml(path: string): Promise<Gep> {
   const [response, contentResponse] = await Promise.all([
-    fetch(`${GITHUB_RAW_BASE}/${path}`),
-    fetch(`${GITHUB_RAW_BASE}/${path.replace('/metadata.yaml', '/index.md')}`).catch(() => null),
+    githubFetch(`${GITHUB_RAW_BASE}/${path}`),
+    githubFetch(`${GITHUB_RAW_BASE}/${path.replace('/metadata.yaml', '/index.md')}`).catch(() => null),
   ]);
   if (!response.ok)
     throw new Error(`Failed to fetch ${path}: ${response.status}`);
@@ -100,7 +101,7 @@ export async function fetchGepContent(gepPath: string): Promise<string | null> {
   const dirPath = gepPath.slice(0, gepPath.lastIndexOf('/'));
   const contentUrl = `${GITHUB_RAW_BASE}/${dirPath}/index.md`;
   try {
-    const response = await fetch(contentUrl);
+    const response = await githubFetch(contentUrl);
     if (!response.ok) return null;
     return await response.text();
   } catch {
@@ -126,7 +127,7 @@ export async function fetchRecentlyChangedGeps(limit = 10): Promise<GitChange[]>
   const cached = getCached<{ number: string; date: string }[]>(CACHE_KEY_GEP_GIT, CACHE_TTL_GIT);
   if (cached) return cached.map((c) => ({ number: c.number, date: new Date(c.date) }));
 
-  const commitsResp = await fetch(
+  const commitsResp = await githubFetch(
     `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits?path=geps/&per_page=100`,
   );
   if (!commitsResp.ok) return [];
@@ -144,7 +145,7 @@ export async function fetchRecentlyChangedGeps(limit = 10): Promise<GitChange[]>
     const batch = commits.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.allSettled(
       batch.map(async (c) => {
-        const resp = await fetch(
+        const resp = await githubFetch(
           `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${c.sha}`,
         );
         if (!resp.ok) return null;
@@ -249,7 +250,7 @@ export async function fetchGatewayApiPRs(
       let reviewStatus: GepPRInfo['reviewStatus'] = 'none';
 
       try {
-        const prResp = await fetch(
+        const prResp = await githubFetch(
           `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}`,
         );
         if (prResp.ok) {
@@ -271,7 +272,7 @@ export async function fetchGatewayApiPRs(
 
           // Reviews
           try {
-            const reviewsResp = await fetch(
+            const reviewsResp = await githubFetch(
               `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}/reviews`,
             );
             if (reviewsResp.ok) {
@@ -293,7 +294,7 @@ export async function fetchGatewayApiPRs(
 
           // CI check runs
           try {
-            const checksResp = await fetch(
+            const checksResp = await githubFetch(
               `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${pr.head.sha}/check-runs`,
             );
             if (checksResp.ok) {
@@ -323,7 +324,7 @@ export async function fetchGatewayApiPRs(
           }
         } else {
           // PR might be closed — try issues endpoint for merged PRs
-          const issueResp = await fetch(
+          const issueResp = await githubFetch(
             `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/issues/${prNum}`,
           );
           if (issueResp.ok) {
