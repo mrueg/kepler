@@ -164,6 +164,24 @@ a:hover { text-decoration: underline; }
   color: #fff;
 }
 
+.milestone-filter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  min-width: 130px;
+}
+.milestone-filter-select:focus { border-color: var(--accent); }
+.milestone-filter-select--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .filter-group {
   display: flex;
   flex-direction: column;

@@ -22,6 +22,7 @@ export function KepListPage() {
     sig: searchParams.get('sig')?.split(',').filter(Boolean) ?? [],
     status: searchParams.get('status')?.split(',').filter(Boolean) ?? [],
     stage: searchParams.get('stage')?.split(',').filter(Boolean) ?? [],
+    milestone: searchParams.get('milestone') ?? '',
     stale: searchParams.get('stale') === 'true',
     bookmarked: false,
   });
@@ -48,6 +49,7 @@ export function KepListPage() {
     if (filters.sig.length) params.set('sig', filters.sig.join(','));
     if (filters.status.length) params.set('status', filters.status.join(','));
     if (filters.stage.length) params.set('stage', filters.stage.join(','));
+    if (filters.milestone) params.set('milestone', filters.milestone);
     if (filters.stale) params.set('stale', 'true');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
@@ -61,6 +63,20 @@ export function KepListPage() {
     () => [...new Set(keps.map((k) => k.sig))].sort(),
     [keps],
   );
+
+  const milestones = useMemo(() => {
+    const ms = keps
+      .map((k) => k['latest-milestone'])
+      .filter((m): m is string => Boolean(m));
+    return [...new Set(ms)].sort((a, b) => {
+      // Sort version strings like v1.32 numerically, newest first
+      const parse = (v: string) => {
+        const match = v.match(/^v?(\d+)\.(\d+)$/);
+        return match ? parseInt(match[1]) * 100 + parseInt(match[2]) : -1;
+      };
+      return parse(b) - parse(a);
+    });
+  }, [keps]);
 
   const filtered = useMemo(() => {
     const q = filters.query.toLowerCase();
@@ -78,6 +94,7 @@ export function KepListPage() {
       if (filters.sig.length && !filters.sig.includes(kep.sig)) return false;
       if (filters.status.length && !filters.status.includes(kep.status ?? '')) return false;
       if (filters.stage.length && !filters.stage.includes(kep.stage ?? '')) return false;
+      if (filters.milestone && kep['latest-milestone'] !== filters.milestone) return false;
       if (filters.stale && !isStale(kep)) return false;
       if (filters.bookmarked && !isBookmarked(kep.number)) return false;
       return true;
@@ -124,7 +141,7 @@ export function KepListPage() {
 
   return (
     <div className="list-page">
-      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
+      <SearchAndFilter filters={filters} sigs={sigs} milestones={milestones} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
 
           {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
 
@@ -141,7 +158,7 @@ export function KepListPage() {
             <div className="results-header">
               <span>
                 {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-                {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
+                {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.milestone || filters.stale || filters.bookmarked) &&
                   ` matching filters`}
               </span>
               <div className="view-toggle">
