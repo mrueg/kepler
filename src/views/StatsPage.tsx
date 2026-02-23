@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -20,6 +20,7 @@ import {
 import { useKeps } from '../hooks/useKeps';
 import { useGeps } from '../hooks/useGeps';
 import { LoadingBar } from '../components/LoadingBar';
+import { fetchGepCreationYears } from '../api/gatewayapi';
 import type { KepStatus } from '../types/kep';
 import type { GepStatus } from '../types/gep';
 
@@ -458,6 +459,26 @@ export function KepStats() {
 
 export function GepStats() {
   const { geps, loading, progress, error, reload } = useGeps();
+  const [gepYears, setGepYears] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (geps.length === 0) return;
+    const numbers = geps.map((g) => g.number);
+    fetchGepCreationYears(numbers).then(setGepYears).catch(() => {/* ignore */});
+  }, [geps]);
+
+  const yearData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const gep of geps) {
+      const year = gepYears[String(gep.number)];
+      if (year) {
+        counts[String(year)] = (counts[String(year)] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .map(([year, count]) => ({ year, count }))
+      .sort((a, b) => a.year.localeCompare(b.year));
+  }, [geps, gepYears]);
 
   const statusData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -595,6 +616,40 @@ export function GepStats() {
               </tbody>
             </table>
           </section>
+
+          {yearData.length > 0 && (
+            <section className="stats-card stats-card--wide">
+              <h2 className="stats-card-title">GEPs Created per Year</h2>
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart
+                  data={yearData}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="year"
+                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="var(--accent)"
+                    strokeWidth={2}
+                    dot={{ fill: 'var(--accent)', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </section>
+          )}
 
           {gepStageFunnelData.length > 0 && (
             <section className="stats-card stats-card--wide">

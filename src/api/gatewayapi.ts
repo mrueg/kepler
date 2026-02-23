@@ -222,6 +222,58 @@ export interface GepPRInfo {
   reviewStatus: 'approved' | 'changes_requested' | 'pending' | 'none';
 }
 
+export const CACHE_KEY_GEP_YEARS = 'kepler_gep_years_v1';
+const CACHE_TTL_YEARS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Returns a map of GEP number → creation year, mined from the earliest git
+ * commit that touched each GEP's metadata.yaml.
+ */
+export async function fetchGepCreationYears(
+  gepNumbers: number[],
+): Promise<Record<string, number>> {
+  const cached = getCached<Record<string, number>>(CACHE_KEY_GEP_YEARS, CACHE_TTL_YEARS);
+  const result: Record<string, number> = cached ? { ...cached } : {};
+  const missing = gepNumbers.filter((n) => !(String(n) in result));
+
+  if (missing.length > 0) {
+    const CONCURRENCY = 5;
+    for (let i = 0; i < missing.length; i += CONCURRENCY) {
+      const batch = missing.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        batch.map(async (num) => {
+          try {
+            const resp = await githubFetch(
+              // per_page=100 covers virtually all GEPs; metadata.yaml files
+              // are created once and rarely modified more than a handful of times.
+              `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits?path=geps/gep-${num}/metadata.yaml&per_page=100`,
+            );
+            if (!resp.ok) return;
+            const commits = (await resp.json()) as Array<{
+              commit: {
+                author?: { date?: string };
+                committer?: { date?: string };
+              };
+            }>;
+            if (commits.length === 0) return;
+            const oldest = commits[commits.length - 1];
+            const date =
+              oldest.commit?.author?.date ?? oldest.commit?.committer?.date;
+            if (date) {
+              result[String(num)] = new Date(date).getFullYear();
+            }
+          } catch {
+            // ignore individual fetch errors
+          }
+        }),
+      );
+    }
+    setCache(CACHE_KEY_GEP_YEARS, result);
+  }
+
+  return result;
+}
+
 /**
  * Fetch live PR state/CI/review status for a list of gateway-api PR URLs.
  * Each URL is expected to look like:
