@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -9,6 +10,7 @@ import type { Gep, GepStatus } from '../types/gep';
 import type { GepPRInfo } from '../api/gatewayapi';
 import { GitHubAvatar } from '../components/GitHubAvatar';
 import { useGepBookmarks } from '../hooks/useGepBookmarks';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 
 const GEP_STATUS_COLORS: Record<GepStatus, string> = {
   Memorandum: '#6e40c9',
@@ -56,12 +58,43 @@ function DetailSection({
 }
 
 export function GepDetailPage({ number }: { number: string }) {
+  const router = useRouter();
   const [gep, setGep] = useState<Gep | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [prs, setPrs] = useState<GepPRInfo[]>([]);
   const { isBookmarked, toggleBookmark } = useGepBookmarks();
+
+  // Build sorted list of GEP numbers from cache for keyboard navigation
+  const getSortedGepNumbers = useCallback((): string[] => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY_GEPS);
+      if (raw) {
+        const { data } = JSON.parse(raw) as { data: Gep[]; timestamp: number };
+        return data.map((g) => String(g.number)).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  }, []);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'b') {
+      toggleBookmark(number);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const numbers = getSortedGepNumbers();
+      const idx = numbers.indexOf(number);
+      if (idx === -1) return;
+      const nextIdx = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
+      if (nextIdx >= 0 && nextIdx < numbers.length) {
+        router.push(`/gep?number=${numbers[nextIdx]}`);
+      }
+    }
+  }, [number, toggleBookmark, getSortedGepNumbers, router]);
+
+  useKeyboardShortcut(handleKeyDown);
 
   useEffect(() => {
     if (!number) return;
