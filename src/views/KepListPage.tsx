@@ -9,8 +9,6 @@ import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 import { isStale } from '../utils/kep';
-import { useRecentKepChanges } from '../hooks/useRecentKepChanges';
-import { WhatsNew } from '../components/WhatsNew';
 
 const PAGE_SIZE = 48;
 
@@ -18,7 +16,6 @@ export function KepListPage() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { keps, loading, progress, error, reload } = useKeps();
-  const { changes: recentKepChanges, loading: gitLoading } = useRecentKepChanges();
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
@@ -33,7 +30,6 @@ export function KepListPage() {
     return isNaN(p) || p < 1 ? 1 : p;
   });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'browse' | 'whats-new'>('browse');
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -91,114 +87,83 @@ export function KepListPage() {
 
   return (
     <div className="list-page">
-      <div className="list-page-layout">
-        <div className="list-page-main">
-          <div className="list-page-tabs" role="tablist">
+      <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
+
+      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+
+      {error && (
+        <div className="error-box">
+          <strong>Error loading KEPs:</strong> {error}
+          <button className="retry-btn" onClick={reload}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="results-header">
+          <span>
+            {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
+            {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
+              ` matching filters`}
+          </span>
+          <div className="view-toggle">
             <button
-              className={`list-page-tab${activeTab === 'browse' ? ' list-page-tab--active' : ''}`}
-              onClick={() => setActiveTab('browse')}
-              role="tab"
-              aria-selected={activeTab === 'browse'}
+              className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
             >
-              Browse KEPs
+              ⊞ Grid
             </button>
             <button
-              className={`list-page-tab${activeTab === 'whats-new' ? ' list-page-tab--active' : ''}`}
-              onClick={() => setActiveTab('whats-new')}
-              role="tab"
-              aria-selected={activeTab === 'whats-new'}
+              className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+              onClick={() => setViewMode('table')}
+              aria-label="Table view"
+              aria-pressed={viewMode === 'table'}
             >
-              🆕 What&apos;s New
+              ☰ Table
             </button>
           </div>
-
-          {activeTab === 'browse' && (
-            <>
-              <SearchAndFilter filters={filters} sigs={sigs} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
-
-              {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-              {error && (
-                <div className="error-box">
-                  <strong>Error loading KEPs:</strong> {error}
-                  <button className="retry-btn" onClick={reload}>
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              {!loading && !error && (
-                <div className="results-header">
-                  <span>
-                    {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-                    {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
-                      ` matching filters`}
-                  </span>
-                  <div className="view-toggle">
-                    <button
-                      className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-                      onClick={() => setViewMode('grid')}
-                      aria-label="Grid view"
-                      aria-pressed={viewMode === 'grid'}
-                    >
-                      ⊞ Grid
-                    </button>
-                    <button
-                      className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-                      onClick={() => setViewMode('table')}
-                      aria-label="Table view"
-                      aria-pressed={viewMode === 'table'}
-                    >
-                      ☰ Table
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {viewMode === 'grid' ? (
-                <div className="kep-grid">
-                  {pageKeps.map((kep) => (
-                    <KepCard
-                      key={kep.path}
-                      kep={kep}
-                      isBookmarked={isBookmarked(kep.number)}
-                      onToggleBookmark={toggleBookmark}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
-              )}
-
-              {totalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    className="page-btn"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    ← Previous
-                  </button>
-                  <span className="page-info">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    className="page-btn"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {activeTab === 'whats-new' && (
-            <WhatsNew keps={keps} recentKepChanges={recentKepChanges} loading={loading || gitLoading} />
-          )}
         </div>
-      </div>
+      )}
+
+      {viewMode === 'grid' ? (
+        <div className="kep-grid">
+          {pageKeps.map((kep) => (
+            <KepCard
+              key={kep.path}
+              kep={kep}
+              isBookmarked={isBookmarked(kep.number)}
+              onToggleBookmark={toggleBookmark}
+            />
+          ))}
+        </div>
+      ) : (
+        <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+      )}
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="page-btn"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            ← Previous
+          </button>
+          <span className="page-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

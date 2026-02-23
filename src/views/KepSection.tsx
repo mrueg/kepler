@@ -4,11 +4,16 @@ import { useState } from 'react';
 import { KepListPage } from './KepListPage';
 import { ReleasePage } from './ReleasePage';
 import { KepStats } from './StatsPage';
+import { WhatsNew } from '../components/WhatsNew';
+import { useKeps } from '../hooks/useKeps';
+import { useRecentKepChanges } from '../hooks/useRecentKepChanges';
 
-type Tab = 'list' | 'release' | 'stats';
+type Tab = 'list' | 'release' | 'whats-new' | 'stats';
 
 export function KepSection() {
   const [activeTab, setActiveTab] = useState<Tab>('list');
+  const { keps, loading } = useKeps();
+  const { changes: recentKepChanges, loading: gitLoading } = useRecentKepChanges();
 
   return (
     <div>
@@ -32,6 +37,15 @@ export function KepSection() {
           Release Timeline
         </button>
         <button
+          className={`stats-tab${activeTab === 'whats-new' ? ' stats-tab--active' : ''}`}
+          onClick={() => setActiveTab('whats-new')}
+          role="tab"
+          aria-selected={activeTab === 'whats-new'}
+          tabIndex={activeTab === 'whats-new' ? 0 : -1}
+        >
+          🆕 What&apos;s New
+        </button>
+        <button
           className={`stats-tab${activeTab === 'stats' ? ' stats-tab--active' : ''}`}
           onClick={() => setActiveTab('stats')}
           role="tab"
@@ -43,6 +57,9 @@ export function KepSection() {
       </div>
       {activeTab === 'list' && <KepListPage />}
       {activeTab === 'release' && <ReleasePage />}
+      {activeTab === 'whats-new' && (
+        <WhatsNew keps={keps} recentKepChanges={recentKepChanges} loading={loading || gitLoading} />
+      )}
       {activeTab === 'stats' && <KepStats />}
     </div>
   );
