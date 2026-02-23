@@ -1,10 +1,11 @@
+import { useState, useRef, useEffect } from 'react';
 import type { KepStatus, KepStage } from '../types/kep';
 
 export interface Filters {
   query: string;
-  sig: string;
-  status: string;
-  stage: string;
+  sig: string[];
+  status: string[];
+  stage: string[];
   stale: boolean;
   bookmarked: boolean;
 }
@@ -28,6 +29,135 @@ const STATUSES: KepStatus[] = [
 
 const STAGES: KepStage[] = ['pre-alpha', 'alpha', 'beta', 'stable'];
 
+interface CheckboxDropdownProps {
+  label: string;
+  items: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  renderItem?: (item: string) => string;
+}
+
+function formatSigDisplayName(sig: string): string {
+  return sig
+    .replace(/^sig-/, 'SIG ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function CheckboxDropdown({
+  label,
+  items,
+  selected,
+  onChange,
+  renderItem,
+}: CheckboxDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [allUnchecked, setAllUnchecked] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  function handleToggleOpen() {
+    // When opening with no active filter, reset to "all checked" visual state
+    if (!open && selected.length === 0) setAllUnchecked(false);
+    setOpen((o) => !o);
+  }
+
+  function isChecked(item: string): boolean {
+    if (allUnchecked) return false;
+    if (selected.length === 0) return true;
+    return selected.includes(item);
+  }
+
+  function toggle(item: string) {
+    let currentlyChecked: string[];
+    if (allUnchecked) {
+      currentlyChecked = [];
+    } else if (selected.length === 0) {
+      currentlyChecked = items;
+    } else {
+      currentlyChecked = selected;
+    }
+    let next: string[];
+    if (currentlyChecked.includes(item)) {
+      next = currentlyChecked.filter((i) => i !== item);
+    } else {
+      next = [...currentlyChecked, item];
+    }
+    setAllUnchecked(false);
+    onChange(next.length === items.length ? [] : next);
+  }
+
+  function selectAll() {
+    setAllUnchecked(false);
+    onChange([]);
+  }
+
+  function deselectAll() {
+    setAllUnchecked(true);
+    onChange([]);
+  }
+
+  const isFiltered = selected.length > 0;
+  const displayLabel = isFiltered ? `${label} (${selected.length})` : label;
+
+  return (
+    <div className="checkbox-dropdown" ref={ref}>
+      <button
+        className={`checkbox-dropdown-btn${isFiltered ? ' checkbox-dropdown-btn--active' : ''}`}
+        onClick={() => handleToggleOpen()}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        type="button"
+      >
+        {displayLabel}
+        <span className="checkbox-dropdown-arrow" aria-hidden="true">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="checkbox-dropdown-panel" role="listbox" aria-multiselectable="true">
+          <div className="checkbox-dropdown-actions">
+            <button
+              className="checkbox-dropdown-action-btn"
+              onClick={selectAll}
+              type="button"
+            >
+              Select All
+            </button>
+            <button
+              className="checkbox-dropdown-action-btn"
+              onClick={deselectAll}
+              type="button"
+            >
+              Deselect All
+            </button>
+          </div>
+          <div className="checkbox-dropdown-list">
+            {items.map((item) => (
+              <label key={item} className="checkbox-dropdown-item">
+                <input
+                  type="checkbox"
+                  checked={isChecked(item)}
+                  onChange={() => toggle(item)}
+                />
+                <span>{renderItem ? renderItem(item) : item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SearchAndFilter({
   filters,
   sigs,
@@ -38,58 +168,48 @@ export function SearchAndFilter({
     onChange({ ...filters, ...patch });
   }
 
+  const hasFilters =
+    filters.query ||
+    filters.sig.length > 0 ||
+    filters.status.length > 0 ||
+    filters.stage.length > 0 ||
+    filters.stale ||
+    filters.bookmarked;
+
   return (
     <div className="search-filter-bar">
       <input
         type="search"
         className="search-input"
-        placeholder="Search by title, KEP number, or author…"
+        placeholder="Search by title, number, author, or README content…"
         value={filters.query}
         onChange={(e) => update({ query: e.target.value })}
         aria-label="Search KEPs"
       />
       <div className="filter-selects">
-        <select
-          className="filter-select"
-          value={filters.sig}
-          onChange={(e) => update({ sig: e.target.value })}
-          aria-label="Filter by SIG"
-        >
-          <option value="">All SIGs</option>
-          {sigs.map((sig) => (
-            <option key={sig} value={sig}>
-              {sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ')}
-            </option>
-          ))}
-        </select>
+        <CheckboxDropdown
+          label="SIG"
+          items={sigs}
+          selected={filters.sig}
+          onChange={(sig) => update({ sig })}
+          renderItem={formatSigDisplayName}
+        />
 
-        <select
-          className="filter-select"
-          value={filters.status}
-          onChange={(e) => update({ status: e.target.value })}
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        <CheckboxDropdown
+          label="Status"
+          items={STATUSES}
+          selected={filters.status}
+          onChange={(status) => update({ status })}
+          renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
+        />
 
-        <select
-          className="filter-select"
-          value={filters.stage}
-          onChange={(e) => update({ stage: e.target.value })}
-          aria-label="Filter by stage"
-        >
-          <option value="">All stages</option>
-          {STAGES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        <CheckboxDropdown
+          label="Stage"
+          items={STAGES}
+          selected={filters.stage}
+          onChange={(stage) => update({ stage })}
+          renderItem={(s) => s.charAt(0).toUpperCase() + s.slice(1)}
+        />
 
         <label className="filter-stale-label">
           <input
@@ -102,11 +222,11 @@ export function SearchAndFilter({
           Stale only
         </label>
 
-        {(filters.query || filters.sig || filters.status || filters.stage || filters.stale || filters.bookmarked) && (
+        {hasFilters && (
           <button
             className="clear-btn"
             onClick={() =>
-              onChange({ query: '', sig: '', status: '', stage: '', stale: false, bookmarked: false })
+              onChange({ query: '', sig: [], status: [], stage: [], stale: false, bookmarked: false })
             }
           >
             Clear

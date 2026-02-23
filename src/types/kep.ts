@@ -43,4 +43,6 @@ export interface Kep extends KepMetadata {
   slug: string;
   // GitHub URLs
   githubUrl: string;
+  // README body text (first 5000 chars) for full-text search
+  readme?: string;
 }

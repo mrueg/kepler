@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAllKeps, CACHE_KEY_KEPS, CACHE_KEY_TREE } from '../api/github';
-import type { Kep } from '../types/kep';
+import { fetchAllGeps, CACHE_KEY_GEPS, CACHE_KEY_GEP_TREE } from '../api/gatewayapi';
+import type { Gep } from '../types/gep';
 
-export interface UseKepsResult {
-  keps: Kep[];
+export interface UseGepsResult {
+  geps: Gep[];
   loading: boolean;
   progress: { loaded: number; total: number };
   error: string | null;
   reload: () => void;
 }
 
-export function useKeps(): UseKepsResult {
-  const [keps, setKeps] = useState<Kep[]>([]);
+export function useGeps(): UseGepsResult {
+  const [geps, setGeps] = useState<Gep[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState({ loaded: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
@@ -23,24 +23,23 @@ export function useKeps(): UseKepsResult {
     async function load() {
       setLoading(true);
       setError(null);
-      setKeps([]);
+      setGeps([]);
       setProgress({ loaded: 0, total: 0 });
 
       try {
-        const data = await fetchAllKeps((loaded, total) => {
+        const data = await fetchAllGeps((loaded, total) => {
           if (!cancelled) {
             setProgress({ loaded, total });
-            // Update keps progressively as they load
           }
         });
         if (!cancelled) {
-          setKeps(data);
+          setGeps(data);
           setProgress({ loaded: data.length, total: data.length });
           setLoading(false);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load KEPs');
+          setError(err instanceof Error ? err.message : 'Failed to load GEPs');
           setLoading(false);
         }
       }
@@ -53,11 +52,10 @@ export function useKeps(): UseKepsResult {
   }, [version]);
 
   const reload = useCallback(() => {
-    // Clear cache
-    localStorage.removeItem(CACHE_KEY_KEPS);
-    localStorage.removeItem(CACHE_KEY_TREE);
+    localStorage.removeItem(CACHE_KEY_GEPS);
+    localStorage.removeItem(CACHE_KEY_GEP_TREE);
     setVersion((v) => v + 1);
   }, []);
 
-  return { keps, loading, progress, error, reload };
+  return { geps, loading, progress, error, reload };
 }
