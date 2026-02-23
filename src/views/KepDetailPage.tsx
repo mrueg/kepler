@@ -464,18 +464,22 @@ function getKepFromCache(number: string): Kep | null {
 
 function KepRef({ value }: { value: string }) {
   const number = extractKepNumber(value);
+  const [cachedKep] = useState<Kep | null>(() => {
+    if (!number || typeof window === 'undefined') return null;
+    return getKepFromCache(number);
+  });
+
   if (number) {
-    const cached = getKepFromCache(number);
     return (
       <span className="kep-ref-item">
         <Link href={`/kep?number=${number}`} className="kep-ref-link">
-          KEP-{number}{cached?.title ? `: ${cached.title}` : ''}
+          KEP-{number}{cachedKep?.title ? `: ${cachedKep.title}` : ''}
         </Link>
-        {cached?.status && (
-          <StatusBadge status={cached.status} />
+        {cachedKep?.status && (
+          <StatusBadge status={cachedKep.status} />
         )}
-        {cached?.stage && (
-          <StageBadge stage={cached.stage} />
+        {cachedKep?.stage && (
+          <StageBadge stage={cachedKep.stage} />
         )}
       </span>
     );
