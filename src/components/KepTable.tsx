@@ -1,25 +1,55 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
-import { StatusBadge, StaleBadge } from './Badges';
+import { StatusBadge, StageBadge, StaleBadge } from './Badges';
 import { isStale } from '../utils/kep';
+
+export type SortKey = 'title' | 'sig' | 'status' | 'stage' | 'last-updated';
 
 interface KepTableProps {
   keps: Kep[];
   isBookmarked?: (number: string) => boolean;
   onToggleBookmark?: (number: string) => void;
+  sortKey?: SortKey;
+  sortDir?: 'asc' | 'desc';
+  onSort?: (key: SortKey) => void;
 }
 
-export function KepTable({ keps, isBookmarked, onToggleBookmark }: KepTableProps) {
+function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+  return (
+    <span className={`sort-indicator${active ? ' sort-indicator-active' : ''}`} aria-hidden="true">
+      {active ? (dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+    </span>
+  );
+}
+
+export function KepTable({ keps, isBookmarked, onToggleBookmark, sortKey, sortDir = 'asc', onSort }: KepTableProps) {
+  function thProps(key: SortKey, label: string, extraClass: string) {
+    if (!onSort) return { className: `kep-table-th ${extraClass}`, children: label };
+    const isActive = sortKey === key;
+    return {
+      className: `kep-table-th kep-table-th-sortable ${extraClass}${isActive ? ' kep-table-th-sorted' : ''}`,
+      onClick: () => onSort(key),
+      'aria-sort': (isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none') as 'ascending' | 'descending' | 'none',
+      children: (
+        <>
+          {label}
+          <SortIndicator active={isActive} dir={sortDir} />
+        </>
+      ),
+    };
+  }
+
   return (
     <div className="kep-table-wrapper">
       <table className="kep-table">
         <thead>
           <tr>
             <th className="kep-table-th kep-table-th-number">Number</th>
-            <th className="kep-table-th kep-table-th-title">Title</th>
-            <th className="kep-table-th kep-table-th-sig">SIG</th>
-            <th className="kep-table-th kep-table-th-status">Status</th>
-            <th className="kep-table-th kep-table-th-date">Last Updated</th>
+            <th {...thProps('title', 'Title', 'kep-table-th-title')} />
+            <th {...thProps('sig', 'SIG', 'kep-table-th-sig')} />
+            <th {...thProps('status', 'Status', 'kep-table-th-status')} />
+            <th {...thProps('stage', 'Stage', 'kep-table-th-stage')} />
+            <th {...thProps('last-updated', 'Last Updated', 'kep-table-th-date')} />
             {onToggleBookmark && (
               <th className="kep-table-th kep-table-th-bookmark" aria-label="Bookmark" />
             )}
@@ -55,6 +85,9 @@ export function KepTable({ keps, isBookmarked, onToggleBookmark }: KepTableProps
                 <td className="kep-table-td kep-table-td-status">
                   <StatusBadge status={kep.status} />
                   {isStale(kep) && <StaleBadge />}
+                </td>
+                <td className="kep-table-td kep-table-td-stage">
+                  <StageBadge stage={kep.stage} />
                 </td>
                 <td className="kep-table-td kep-table-td-date">{dateDisplay}</td>
                 {onToggleBookmark && (
