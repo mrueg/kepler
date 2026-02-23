@@ -73,7 +73,7 @@ function MilestoneHeatmap({ data }: { data: HeatmapCell[] }) {
   );
 }
 
-function KepStats() {
+export function KepStats() {
   const { keps, loading, progress, error, reload } = useKeps();
 
   const sigData = useMemo(() => {
@@ -456,7 +456,7 @@ function KepStats() {
   );
 }
 
-function GepStats() {
+export function GepStats() {
   const { geps, loading, progress, error, reload } = useGeps();
 
   const statusData = useMemo(() => {

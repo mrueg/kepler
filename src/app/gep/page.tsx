@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { GepListPage } from '../../views/GepListPage';
+import { GepSection } from '../../views/GepSection';
 import { GepDetailPage } from '../../views/GepDetailPage';
 
 function GepPageContent() {
@@ -24,7 +24,7 @@ function GepPageContent() {
     return <GepDetailPage number={number} />;
   }
 
-  return <GepListPage />;
+  return <GepSection />;
 }
 
 export default function GepPage() {
