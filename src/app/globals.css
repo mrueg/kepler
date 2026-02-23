@@ -131,6 +131,21 @@ a:hover { text-decoration: underline; }
 .cache-refresh-btn:hover:not(:disabled) { color: #58a6ff; border-color: #58a6ff; }
 .cache-refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+.rate-limit-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+.rate-limit-indicator--low { color: #d97706; }
+.rate-limit-indicator--exceeded { color: #dc2626; }
+.rate-limit-icon { font-size: 0.875rem; line-height: 1; }
+.rate-limit-label { font-size: 0.8125rem; }
+
 /* Search & filter bar */
 .search-filter-bar {
   background: var(--surface);

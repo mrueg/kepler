@@ -1,5 +1,23 @@
+import { updateRateLimit } from './rateLimitStore';
+
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+
+/**
+ * Reads GitHub rate-limit headers from a response and updates the shared store.
+ */
+function captureRateLimitHeaders(response: Response, isRateLimited: boolean): void {
+  // Rate limit headers are only meaningful in a browser context where the
+  // shared store and CustomEvent dispatch are available.
+  if (typeof window === 'undefined') return;
+  const remainingRaw = response.headers.get('x-ratelimit-remaining');
+  const limitRaw = response.headers.get('x-ratelimit-limit');
+  const resetRaw = response.headers.get('x-ratelimit-reset');
+  const remaining = remainingRaw !== null ? parseInt(remainingRaw, 10) : null;
+  const limit = limitRaw !== null ? parseInt(limitRaw, 10) : null;
+  const reset = resetRaw !== null ? new Date(parseInt(resetRaw, 10) * 1000) : null;
+  updateRateLimit({ remaining, limit, reset, isRateLimited });
+}
 
 /**
  * Calculates the delay in milliseconds before retrying a rate-limited request.
@@ -47,6 +65,7 @@ export async function githubFetch(
         response.headers.get('x-ratelimit-remaining') === '0');
 
     if (!isRateLimited || attempt === MAX_RETRIES) {
+      captureRateLimitHeaders(response, isRateLimited);
       return response;
     }
 
