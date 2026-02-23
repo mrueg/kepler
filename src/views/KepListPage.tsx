@@ -9,6 +9,7 @@ import { KepTable } from '../components/KepTable';
 import { LoadingBar } from '../components/LoadingBar';
 import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
 import { isStale } from '../utils/kep';
+import { WhatsNew } from '../components/WhatsNew';
 
 const PAGE_SIZE = 48;
 
@@ -100,70 +101,76 @@ export function KepListPage() {
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="results-header">
-          <span>
-            {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-            {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
-              ` matching filters`}
-          </span>
-          <div className="view-toggle">
-            <button
-              className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-              aria-pressed={viewMode === 'grid'}
-            >
-              ⊞ Grid
-            </button>
-            <button
-              className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-              onClick={() => setViewMode('table')}
-              aria-label="Table view"
-              aria-pressed={viewMode === 'table'}
-            >
-              ☰ Table
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="list-page-layout">
+        <div className="list-page-main">
+          {!loading && !error && (
+            <div className="results-header">
+              <span>
+                {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
+                {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.stale || filters.bookmarked) &&
+                  ` matching filters`}
+              </span>
+              <div className="view-toggle">
+                <button
+                  className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === 'grid'}
+                >
+                  ⊞ Grid
+                </button>
+                <button
+                  className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
+                  onClick={() => setViewMode('table')}
+                  aria-label="Table view"
+                  aria-pressed={viewMode === 'table'}
+                >
+                  ☰ Table
+                </button>
+              </div>
+            </div>
+          )}
 
-      {viewMode === 'grid' ? (
-        <div className="kep-grid">
-          {pageKeps.map((kep) => (
-            <KepCard
-              key={kep.path}
-              kep={kep}
-              isBookmarked={isBookmarked(kep.number)}
-              onToggleBookmark={toggleBookmark}
-            />
-          ))}
-        </div>
-      ) : (
-        <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
-      )}
+          {viewMode === 'grid' ? (
+            <div className="kep-grid">
+              {pageKeps.map((kep) => (
+                <KepCard
+                  key={kep.path}
+                  kep={kep}
+                  isBookmarked={isBookmarked(kep.number)}
+                  onToggleBookmark={toggleBookmark}
+                />
+              ))}
+            </div>
+          ) : (
+            <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+          )}
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="page-btn"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            ← Previous
-          </button>
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="page-btn"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next →
-          </button>
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                ← Previous
+              </button>
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        <WhatsNew keps={keps} loading={loading} />
+      </div>
     </div>
   );
 }
