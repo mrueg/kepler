@@ -513,6 +513,7 @@ a:hover { text-decoration: underline; }
 }
 .kep-table-td-number { white-space: nowrap; }
 .kep-table-td-sig    { color: var(--text-secondary); font-size: 0.82rem; text-transform: capitalize; }
+.kep-table-td-stage  { font-size: 0.82rem; }
 .kep-table-td-date   { color: var(--text-secondary); white-space: nowrap; font-size: 0.82rem; }
 
 .kep-table-number-link {
