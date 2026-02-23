@@ -12,7 +12,7 @@ A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https:
 - 🗓️ **Release timeline** — see which KEPs were introduced or graduated per Kubernetes release
 
 ### Search & Filtering
-- 🔍 **Search** by title, KEP number, author, or README content
+- 🔍 **Search** by title, KEP/GEP number, or author
 - 🎛️ **Filter** by SIG, status (provisional, implementable, implemented, etc.), and stage (alpha, beta, stable)
 - 🏷️ **Stale indicator** for proposals not updated in over a year
 

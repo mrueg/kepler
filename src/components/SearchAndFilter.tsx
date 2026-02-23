@@ -194,7 +194,7 @@ export function SearchAndFilter({
         ref={searchRef}
         type="search"
         className="search-input"
-        placeholder="Search by title, number, author, or README content…"
+        placeholder="Search by title, number, or author…"
         value={filters.query}
         onChange={(e) => update({ query: e.target.value })}
         aria-label="Search KEPs"

@@ -81,7 +81,11 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   const readmeText = readmeResponse?.ok ? await readmeResponse.text() : undefined;
   const readme = readmeText ? readmeText.slice(0, 5000) : undefined;
 
-  const metadata = (yaml.load(text) as KepMetadata) || {};
+  const raw = (yaml.load(text) as Record<string, unknown>) || {};
+  // js-yaml auto-parses YYYY-MM-DD values as Date objects; convert them back to strings
+  const metadata = Object.fromEntries(
+    Object.entries(raw).map(([k, v]) => [k, v instanceof Date ? v.toISOString().split('T')[0] : v]),
+  ) as KepMetadata;
   const pathInfo = parseKepPath(path)!;
   const dirPath = path.replace('/kep.yaml', '');
 
