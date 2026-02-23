@@ -1,5 +1,6 @@
 import yaml from 'js-yaml';
 import type { Kep, KepMetadata } from '../types/kep';
+import { githubFetch } from '../utils/githubFetch';
 
 const GITHUB_RAW_BASE =
   'https://raw.githubusercontent.com/kubernetes/enhancements/master';
@@ -46,7 +47,7 @@ export async function fetchKepPaths(): Promise<string[]> {
   const cached = getCached<string[]>(CACHE_KEY_TREE, CACHE_TTL_TREE);
   if (cached) return cached;
 
-  const response = await fetch(
+  const response = await githubFetch(
     `${GITHUB_API_BASE}/repos/kubernetes/enhancements/git/trees/HEAD?recursive=1`,
   );
   if (!response.ok)
@@ -71,8 +72,8 @@ export async function fetchKepPaths(): Promise<string[]> {
 
 export async function fetchKepYaml(path: string): Promise<Kep> {
   const [yamlResponse, readmeResponse] = await Promise.all([
-    fetch(`${GITHUB_RAW_BASE}/${path}`),
-    fetch(`${GITHUB_RAW_BASE}/${path.replace('/kep.yaml', '/README.md')}`).catch(() => null),
+    githubFetch(`${GITHUB_RAW_BASE}/${path}`),
+    githubFetch(`${GITHUB_RAW_BASE}/${path.replace('/kep.yaml', '/README.md')}`).catch(() => null),
   ]);
   if (!yamlResponse.ok)
     throw new Error(`Failed to fetch ${path}: ${yamlResponse.status}`);
@@ -116,7 +117,7 @@ export async function fetchEnhancementPRs(
 ): Promise<PRInfo[]> {
   try {
     const searchUrl = `${GITHUB_API_BASE}/search/issues?q=repo:kubernetes/enhancements+is:pr+${encodeURIComponent(kepNumber)}&per_page=5&sort=updated&order=desc`;
-    const searchResp = await fetch(searchUrl);
+    const searchResp = await githubFetch(searchUrl);
     if (!searchResp.ok) return [];
     const searchData = (await searchResp.json()) as {
       items: { number: number; title: string; state: string; html_url: string; pull_request?: { merged_at: string | null }; draft?: boolean; user: { login: string } }[];
@@ -135,7 +136,7 @@ export async function fetchEnhancementPRs(
         let reviewStatus: PRInfo['reviewStatus'] = 'none';
 
         try {
-          const prResp = await fetch(
+          const prResp = await githubFetch(
             `${GITHUB_API_BASE}/repos/kubernetes/enhancements/pulls/${item.number}/reviews`,
           );
           if (prResp.ok) {
@@ -157,12 +158,12 @@ export async function fetchEnhancementPRs(
         }
 
         try {
-          const prDetailResp = await fetch(
+          const prDetailResp = await githubFetch(
             `${GITHUB_API_BASE}/repos/kubernetes/enhancements/pulls/${item.number}`,
           );
           if (prDetailResp.ok) {
             const prDetail = (await prDetailResp.json()) as { head: { sha: string } };
-            const checksResp = await fetch(
+            const checksResp = await githubFetch(
               `${GITHUB_API_BASE}/repos/kubernetes/enhancements/commits/${prDetail.head.sha}/check-runs`,
             );
             if (checksResp.ok) {
@@ -207,7 +208,7 @@ export async function fetchKepReadme(kepPath: string): Promise<string | null> {
   const dirPath = kepPath.slice(0, kepPath.lastIndexOf('/'));
   const readmeUrl = `${GITHUB_RAW_BASE}/${dirPath}/README.md`;
   try {
-    const response = await fetch(readmeUrl);
+    const response = await githubFetch(readmeUrl);
     if (!response.ok) return null;
     return await response.text();
   } catch {
@@ -233,7 +234,7 @@ export async function fetchRecentlyChangedKeps(limit = 10): Promise<GitChange[]>
   const cached = getCached<{ number: string; date: string }[]>(CACHE_KEY_KEP_GIT, CACHE_TTL_GIT);
   if (cached) return cached.map((c) => ({ number: c.number, date: new Date(c.date) }));
 
-  const commitsResp = await fetch(
+  const commitsResp = await githubFetch(
     `${GITHUB_API_BASE}/repos/kubernetes/enhancements/commits?path=keps/&per_page=100`,
   );
   if (!commitsResp.ok) return [];
@@ -251,7 +252,7 @@ export async function fetchRecentlyChangedKeps(limit = 10): Promise<GitChange[]>
     const batch = commits.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.allSettled(
       batch.map(async (c) => {
-        const resp = await fetch(
+        const resp = await githubFetch(
           `${GITHUB_API_BASE}/repos/kubernetes/enhancements/commits/${c.sha}`,
         );
         if (!resp.ok) return null;
