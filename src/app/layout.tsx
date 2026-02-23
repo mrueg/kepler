@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { CacheFreshnessIndicator } from '../components/CacheFreshnessIndicator';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -81,6 +82,7 @@ export default function RootLayout({
                 mrueg/kepler
               </a>
             </p>
+            <CacheFreshnessIndicator />
           </footer>
         </div>
       </body>
