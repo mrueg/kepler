@@ -491,7 +491,17 @@ a:hover { text-decoration: underline; }
 .kep-table-th-title  { min-width: 200px; }
 .kep-table-th-sig    { width: 160px; }
 .kep-table-th-status { width: 130px; }
+.kep-table-th-stage  { width: 90px; }
 .kep-table-th-date   { width: 130px; white-space: nowrap; }
+
+.kep-table-th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.kep-table-th-sortable:hover { color: var(--text); }
+.kep-table-th-sorted { color: var(--accent); }
+.sort-indicator { opacity: 0.4; font-size: 0.7em; }
+.sort-indicator-active { opacity: 1; }
 
 .kep-table-row:not(:last-child) td { border-bottom: 1px solid var(--border); }
 .kep-table-row:hover td { background: var(--bg); }
@@ -503,6 +513,7 @@ a:hover { text-decoration: underline; }
 }
 .kep-table-td-number { white-space: nowrap; }
 .kep-table-td-sig    { color: var(--text-secondary); font-size: 0.82rem; text-transform: capitalize; }
+.kep-table-td-stage  { font-size: 0.82rem; }
 .kep-table-td-date   { color: var(--text-secondary); white-space: nowrap; font-size: 0.82rem; }
 
 .kep-table-number-link {
