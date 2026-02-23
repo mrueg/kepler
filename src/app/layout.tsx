@@ -60,6 +60,14 @@ export default function RootLayout({
               >
                 kubernetes-sigs/gateway-api
               </a>
+              {' · '}
+              <a
+                href="https://github.com/mrueg/kepler"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                mrueg/kepler
+              </a>
             </p>
           </footer>
         </div>
