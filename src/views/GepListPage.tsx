@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useGeps } from '../hooks/useGeps';
 import { useGepBookmarks } from '../hooks/useGepBookmarks';
 import { LoadingBar } from '../components/LoadingBar';
 import { CheckboxDropdown } from '../components/SearchAndFilter';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import type { Gep, GepStatus } from '../types/gep';
 import { GEP_STATUS_COLORS } from '../utils/gep';
 
@@ -35,7 +36,7 @@ function GepCard({
   return (
     <Link href={`/gep?number=${gepNumber}`} className="kep-card">
       <div className="kep-card-number">GEP-{gepNumber}</div>
-      <div className="kep-card-title">{gep.name}</div>
+      <h3 className="kep-card-title">{gep.name}</h3>
       <div className="kep-card-badges">
         <GepStatusBadge status={gep.status} />
       </div>
@@ -64,23 +65,55 @@ function GepCard({
   );
 }
 
+export type GepSortKey = 'number' | 'name' | 'status';
+
+function SortIndicator({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+  return (
+    <span className={`sort-indicator${active ? ' sort-indicator-active' : ''}`} aria-hidden="true">
+      {active ? (dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+    </span>
+  );
+}
+
 function GepTable({
   geps,
   isBookmarked,
   onToggleBookmark,
+  sortKey,
+  sortDir = 'asc',
+  onSort,
 }: {
   geps: Gep[];
   isBookmarked?: (number: string) => boolean;
   onToggleBookmark?: (number: string) => void;
+  sortKey?: GepSortKey;
+  sortDir?: 'asc' | 'desc';
+  onSort?: (key: GepSortKey) => void;
 }) {
+  function thProps(key: GepSortKey, label: string, extraClass: string) {
+    if (!onSort) return { className: `kep-table-th ${extraClass}`, children: label };
+    const isActive = sortKey === key;
+    return {
+      className: `kep-table-th kep-table-th-sortable ${extraClass}${isActive ? ' kep-table-th-sorted' : ''}`,
+      onClick: () => onSort(key),
+      'aria-sort': (isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none') as 'ascending' | 'descending' | 'none',
+      children: (
+        <>
+          {label}
+          <SortIndicator active={isActive} dir={sortDir} />
+        </>
+      ),
+    };
+  }
+
   return (
     <div className="kep-table-wrapper">
       <table className="kep-table">
         <thead>
           <tr>
-            <th className="kep-table-th kep-table-th-number">Number</th>
-            <th className="kep-table-th kep-table-th-title">Name</th>
-            <th className="kep-table-th kep-table-th-status">Status</th>
+            <th {...thProps('number', 'Number', 'kep-table-th-number')} />
+            <th {...thProps('name', 'Name', 'kep-table-th-title')} />
+            <th {...thProps('status', 'Status', 'kep-table-th-status')} />
             <th className="kep-table-th kep-table-th-date">Authors</th>
             {onToggleBookmark && (
               <th className="kep-table-th kep-table-th-bookmark" aria-label="Bookmark" />
@@ -153,6 +186,27 @@ export function GepListPage() {
     return isNaN(p) || p < 1 ? 1 : p;
   });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [sortKey, setSortKey] = useState<GepSortKey | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  function handleSort(key: GepSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  const handleSlash = useCallback((e: KeyboardEvent) => {
+    if (e.key === '/') {
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+  }, []);
+
+  useKeyboardShortcut(handleSlash);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -189,9 +243,28 @@ export function GepListPage() {
     });
   }, [geps, filters, isBookmarked]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      let av = '';
+      let bv = '';
+      if (sortKey === 'name') {
+        av = (a.name ?? '').toLowerCase();
+        bv = (b.name ?? '').toLowerCase();
+      } else if (sortKey === 'status') {
+        av = a.status ?? '';
+        bv = b.status ?? '';
+      } else if (sortKey === 'number') {
+        return sortDir === 'asc' ? a.number - b.number : b.number - a.number;
+      }
+      const cmp = av.localeCompare(bv);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageGeps = filtered.slice(
+  const pageGeps = sorted.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
@@ -207,11 +280,13 @@ export function GepListPage() {
     <div className="list-page">
       <div className="search-filter-bar">
             <input
+              ref={searchRef}
               className="search-input"
               type="search"
               placeholder="Search GEPs by number, name, or author…"
               value={filters.query}
               onChange={(e) => { setFilters((f) => ({ ...f, query: e.target.value })); setPage(1); }}
+              aria-label="Search GEPs"
             />
             <div className="filter-selects">
               <CheckboxDropdown
@@ -291,7 +366,7 @@ export function GepListPage() {
               ))}
             </div>
           ) : (
-            <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} />
+            <GepTable geps={pageGeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           )}
 
           {totalPages > 1 && (
