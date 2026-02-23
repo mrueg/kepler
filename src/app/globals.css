@@ -1246,29 +1246,14 @@ a:hover { text-decoration: underline; }
   color: var(--text-secondary);
   font-weight: 500;
 }
-/* What's New sidebar layout */
-.list-page-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-.list-page-main {
-  flex: 1;
-  min-width: 0;
-}
-
-/* What's New sidebar */
+/* What's New (tab panel) */
 .whats-new {
-  width: 280px;
-  flex-shrink: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow);
-  position: sticky;
-  top: 16px;
+  max-width: 560px;
 }
 
 .whats-new-title {
@@ -1477,14 +1462,4 @@ a:hover { text-decoration: underline; }
   font-size: 0.8rem;
   color: var(--text-secondary);
   padding: 4px 0;
-}
-
-@media (max-width: 900px) {
-  .list-page-layout {
-    flex-direction: column;
-  }
-  .whats-new {
-    width: 100%;
-    position: static;
-  }
 }
