@@ -96,14 +96,14 @@ export function KepListPage() {
         av = a.sig.toLowerCase();
         bv = b.sig.toLowerCase();
       } else if (sortKey === 'status') {
-        av = a.status ?? '';
-        bv = b.status ?? '';
+        av = (a.status ?? '').toLowerCase();
+        bv = (b.status ?? '').toLowerCase();
       } else if (sortKey === 'stage') {
-        av = a.stage ?? '';
-        bv = b.stage ?? '';
+        av = (a.stage ?? '').toLowerCase();
+        bv = (b.stage ?? '').toLowerCase();
       } else if (sortKey === 'last-updated') {
-        av = a['last-updated'] ?? a['creation-date'] ?? '';
-        bv = b['last-updated'] ?? b['creation-date'] ?? '';
+        av = (a['last-updated'] ?? a['creation-date'] ?? '').toLowerCase();
+        bv = (b['last-updated'] ?? b['creation-date'] ?? '').toLowerCase();
       }
       const cmp = av.localeCompare(bv);
       return sortDir === 'asc' ? cmp : -cmp;
