@@ -237,6 +237,26 @@ export function KepDetailPage({ number }: { number: string }) {
           </DetailSection>
         )}
 
+        {kep['prr-approvers'] && kep['prr-approvers'].length > 0 && (
+          <DetailSection title="PRR Approvers">
+            <ul className="people-list">
+              {kep['prr-approvers'].map((a) => (
+                <li key={a}>
+                  <a
+                    href={`https://github.com/${a.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gh-link"
+                  >
+                    <GitHubAvatar username={a} size={20} />
+                    @{a.replace(/^@/, '')}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </DetailSection>
+        )}
+
         {kep.milestone && Object.keys(kep.milestone).length > 0 && (
           <DetailSection title="Milestones">
             <MilestoneTimeline milestone={kep.milestone} stage={kep.stage} />

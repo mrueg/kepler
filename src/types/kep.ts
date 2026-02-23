@@ -32,6 +32,8 @@ export interface KepMetadata {
   milestone?: KepMilestone;
   'participating-sigs'?: string[];
   'latest-milestone'?: string;
+  'kep-number'?: number;
+  'prr-approvers'?: string[];
 }
 
 export interface Kep extends KepMetadata {
