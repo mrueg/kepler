@@ -37,11 +37,10 @@ function formatTimeAgo(ms: number): string {
 }
 
 export function CacheFreshnessIndicator() {
-  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(getElapsedMs);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    setElapsedMs(getElapsedMs());
     const interval = setInterval(() => setElapsedMs(getElapsedMs()), 60_000);
     return () => clearInterval(interval);
   }, []);
