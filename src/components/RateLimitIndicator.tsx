@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { getRateLimitInfo, onRateLimitChange } from '../utils/rateLimitStore';
 import type { RateLimitInfo } from '../utils/rateLimitStore';
 
@@ -15,13 +15,11 @@ function formatReset(reset: Date | null): string {
 }
 
 export function RateLimitIndicator() {
-  const [info, setInfo] = useState<RateLimitInfo>(getRateLimitInfo);
-
-  useEffect(() => {
-    // Sync with any updates that happened before the component mounted
-    setInfo(getRateLimitInfo());
-    return onRateLimitChange(setInfo);
-  }, []);
+  const info = useSyncExternalStore<RateLimitInfo>(
+    onRateLimitChange,
+    getRateLimitInfo,
+    getRateLimitInfo,
+  );
 
   if (info.remaining === null) return null;
 
