@@ -24,7 +24,7 @@
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "eslint-config-next": "16.2.9",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.7.0",
