@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import { load as yamlLoad } from 'js-yaml';
 import type { Kep, KepMetadata } from '../types/kep';
 import { githubFetch } from '../utils/githubFetch';
 
@@ -82,7 +82,7 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   const readmeText = readmeResponse?.ok ? await readmeResponse.text() : undefined;
   const readme = readmeText ? readmeText.slice(0, 5000) : undefined;
 
-  const raw = (yaml.load(text) as Record<string, unknown>) || {};
+  const raw = (yamlLoad(text) as Record<string, unknown>) || {};
   // js-yaml auto-parses YYYY-MM-DD values as Date objects; convert them back to strings
   const metadata = Object.fromEntries(
     Object.entries(raw).map(([k, v]) => [k, v instanceof Date ? v.toISOString().split('T')[0] : v]),
