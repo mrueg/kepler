@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import { load as yamlLoad } from 'js-yaml';
 import type { Gep, GepMetadata } from '../types/gep';
 import { githubFetch } from '../utils/githubFetch';
 
@@ -83,7 +83,7 @@ export async function fetchGepYaml(path: string): Promise<Gep> {
   const text = await response.text();
   const content = contentResponse?.ok ? await contentResponse.text() : undefined;
 
-  const metadata = yaml.load(text) as GepMetadata | null;
+  const metadata = yamlLoad(text) as GepMetadata | null;
   if (!metadata || typeof metadata.number === 'undefined' || !metadata.name) {
     throw new Error(`Invalid GEP metadata at ${path}`);
   }
