@@ -9,7 +9,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
-
