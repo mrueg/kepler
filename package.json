@@ -27,7 +27,7 @@
     "eslint": "^10.8.0",
     "eslint-config-next": "16.2.12",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.65.0"
   }
