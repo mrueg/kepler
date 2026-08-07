@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "js-yaml": "^5.2.3",
-    "next": "16.2.12",
+    "next": "16.3.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
