@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "js-yaml": "^5.4.1",
+    "js-yaml": "^5.4.2",
     "next": "16.3.4",
     "react": "^19.3.0",
     "react-dom": "^19.2.8",
