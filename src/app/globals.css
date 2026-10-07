@@ -445,6 +445,15 @@ a:hover { text-decoration: underline; }
   transform: translateY(-1px);
   text-decoration: none;
 }
+/* Cards are divs; the title link is stretched over the whole card so it stays
+   clickable without nesting the bookmark button inside a link. */
+.kep-card { position: relative; }
+.kep-card-link { color: inherit; text-decoration: none; }
+.kep-card-link:hover { text-decoration: none; }
+.kep-card-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.kep-card-link:focus-visible { outline: none; }
+.kep-card:has(.kep-card-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kep-card .bookmark-star { position: relative; z-index: 1; }
 
 .kep-card-number {
   font-size: 0.75rem;

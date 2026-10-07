@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, useRef, useCallback, useDeferredValue } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { UseProposalsResult } from '../hooks/useProposals';
 import { useGepBookmarks } from '../hooks/useBookmarks';
 import { useSort } from '../hooks/useSort';
+import { useUrlSync } from '../hooks/useUrlSync';
+import { gepSearchText } from '../utils/gep';
 import { LoadStatus } from '../components/LoadingBar';
 import { CheckboxDropdown } from '../components/SearchAndFilter';
 import { GepStatusBadge, BookmarkButton } from '../components/Badges';
@@ -33,9 +35,13 @@ function GepCard({
 }) {
   const gepNumber = String(gep.number);
   return (
-    <Link href={`/gep?number=${gepNumber}`} className="kep-card">
+    <div className="kep-card">
       <div className="kep-card-number">GEP-{gepNumber}</div>
-      <h3 className="kep-card-title">{gep.name}</h3>
+      <h3 className="kep-card-title">
+        <Link href={`/gep?number=${gepNumber}`} className="kep-card-link">
+          {gep.name}
+        </Link>
+      </h3>
       <div className="kep-card-badges">
         <GepStatusBadge status={gep.status} />
       </div>
@@ -43,7 +49,7 @@ function GepCard({
         <div className="kep-card-date">{formatAuthors(gep.authors)}</div>
       )}
       <BookmarkButton active={isBookmarked} onToggle={() => onToggleBookmark(gepNumber)} noun="GEP" />
-    </Link>
+    </div>
   );
 }
 
@@ -120,7 +126,6 @@ interface GepFilters {
 }
 
 export function GepListPage({ data }: { data: UseProposalsResult<Gep> }) {
-  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { items: geps, loading, error } = data;
   const { bookmarks, toggleBookmark, isBookmarked } = useGepBookmarks();
@@ -146,40 +151,29 @@ export function GepListPage({ data }: { data: UseProposalsResult<Gep> }) {
 
   useKeyboardShortcut(handleSlash);
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.query) params.set('q', filters.query);
-    if (filters.status.length) params.set('status', filters.status.join(','));
-    if (page > 1) params.set('page', String(page));
-    const qs = params.toString();
-    const newSearch = qs ? `?${qs}` : '';
-    if (typeof window !== 'undefined' && newSearch !== window.location.search) {
-      replace(newSearch || '/gep', { scroll: false });
-    }
-  }, [filters, page, replace]);
+  const urlParams = new URLSearchParams();
+  if (filters.query) urlParams.set('q', filters.query);
+  if (filters.status.length) urlParams.set('status', filters.status.join(','));
+  if (page > 1) urlParams.set('page', String(page));
+  useUrlSync(urlParams, '/gep');
 
   const statuses = useMemo(
     () => [...new Set(geps.map((g) => g.status).filter(Boolean))].sort(),
     [geps],
   );
 
+  const searchTexts = useMemo(() => new Map(geps.map((g) => [g.path, gepSearchText(g)])), [geps]);
+  const query = useDeferredValue(filters.query);
+
   const filtered = useMemo(() => {
-    const q = filters.query.toLowerCase();
+    const q = query.toLowerCase();
     return geps.filter((gep) => {
-      if (
-        q &&
-        !gep.name?.toLowerCase().includes(q) &&
-        !String(gep.number).includes(q) &&
-        !gep.authors?.some((a) => a.toLowerCase().includes(q)) &&
-        !gep.content?.toLowerCase().includes(q)
-      ) {
-        return false;
-      }
+      if (q && !searchTexts.get(gep.path)?.includes(q)) return false;
       if (filters.status.length && !filters.status.includes(gep.status ?? '')) return false;
       if (filters.bookmarked && !isBookmarked(String(gep.number))) return false;
       return true;
     });
-  }, [geps, filters, isBookmarked]);
+  }, [geps, searchTexts, query, filters, isBookmarked]);
 
   const sorted = useMemo(() => {
     if (!sortKey) return filtered;

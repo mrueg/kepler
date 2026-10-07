@@ -15,9 +15,15 @@ export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCard
   const creationYear = kep['creation-date']?.slice(0, 4);
 
   return (
-    <Link href={`/kep?number=${kep.number}`} className="kep-card">
+    // A div, not a link, so the bookmark button isn't nested inside an <a>;
+    // the title link is stretched over the whole card via CSS instead.
+    <div className="kep-card">
       <div className="kep-card-number">KEP-{kep.number}</div>
-      <h3 className="kep-card-title">{kepDisplayTitle(kep)}</h3>
+      <h3 className="kep-card-title">
+        <Link href={`/kep?number=${kep.number}`} className="kep-card-link">
+          {kepDisplayTitle(kep)}
+        </Link>
+      </h3>
       <div className="kep-card-sig">{formatSig(kep.sig)}</div>
       <div className="kep-card-badges">
         <StatusBadge status={kep.status} />
@@ -28,6 +34,6 @@ export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCard
       {onToggleBookmark && (
         <BookmarkButton active={isBookmarked} onToggle={() => onToggleBookmark(kep.number)} noun="KEP" />
       )}
-    </Link>
+    </div>
   );
 }

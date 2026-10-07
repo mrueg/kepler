@@ -108,3 +108,14 @@ function versionRank(v: string): number {
 export function compareVersions(a: string, b: string): number {
   return versionRank(a) - versionRank(b);
 }
+
+/**
+ * Lowercased text that search queries are matched against: title, number,
+ * slug, authors and the README excerpt (when loaded).
+ */
+export function kepSearchText(kep: Kep): string {
+  return [kep.title, kep.number, kep.slug, ...(kep.authors ?? []), kep.readme]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+}

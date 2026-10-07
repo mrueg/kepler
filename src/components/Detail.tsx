@@ -2,6 +2,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { PRInfo } from '../api/shared';
 import { GitHubAvatar } from './GitHubAvatar';
+import { resolveMarkdownUrl } from '../utils/markdown';
 
 export function MetaItem({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -114,12 +115,27 @@ export function GitHubLink({ href }: { href: string }) {
   );
 }
 
-export function MarkdownSection({ title, markdown }: { title: string; markdown: string }) {
+export function MarkdownSection({
+  title,
+  markdown,
+  githubDirUrl,
+}: {
+  title: string;
+  markdown: string;
+  /** GitHub tree URL of the folder the markdown lives in, used to resolve relative links. */
+  githubDirUrl: string;
+}) {
   return (
     <div className="detail-readme">
       <h2 className="detail-readme-title">{title}</h2>
       <div className="detail-readme-body">
-        <Markdown remarkPlugins={[remarkGfm]} skipHtml>{markdown}</Markdown>
+        <Markdown
+          remarkPlugins={[remarkGfm]}
+          skipHtml
+          urlTransform={(url, key) => resolveMarkdownUrl(url, key, githubDirUrl)}
+        >
+          {markdown}
+        </Markdown>
       </div>
     </div>
   );

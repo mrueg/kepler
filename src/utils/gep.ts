@@ -1,4 +1,4 @@
-import type { GepStatus } from '../types/gep';
+import type { Gep, GepStatus } from '../types/gep';
 
 export const GEP_STATUS_COLORS: Record<GepStatus, string> = {
   Memorandum: '#6e40c9',
@@ -11,3 +11,11 @@ export const GEP_STATUS_COLORS: Record<GepStatus, string> = {
 };
 
 export const DEFAULT_STATUS_COLOR = '#8b949e';
+
+/** Lowercased text that search queries are matched against. */
+export function gepSearchText(gep: Gep): string {
+  return [gep.name, String(gep.number), ...(gep.authors ?? []), gep.content]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+}

@@ -18,7 +18,8 @@ function KepPageContent() {
       </div>
     );
   }
-  return <KepDetailPage number={number} />;
+  // Keyed so navigating to another KEP starts from fresh state.
+  return <KepDetailPage key={number} number={number} />;
 }
 
 export default function KepPage() {

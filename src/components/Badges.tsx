@@ -70,12 +70,7 @@ export function BookmarkButton({ active, onToggle, noun, detail = false }: Bookm
   return (
     <button
       className={`bookmark-star${detail ? ' bookmark-star-detail' : ''}${active ? ' bookmark-star-active' : ''}`}
-      onClick={(e) => {
-        // Cards wrap the button in a link; don't navigate when toggling.
-        e.preventDefault();
-        e.stopPropagation();
-        onToggle();
-      }}
+      onClick={onToggle}
       aria-label={active ? 'Remove bookmark' : 'Add bookmark'}
       aria-pressed={active}
       title={active ? 'Remove bookmark' : `Bookmark this ${noun}`}

@@ -21,7 +21,8 @@ function GepPageContent() {
         </div>
       );
     }
-    return <GepDetailPage number={number} />;
+    // Keyed so navigating to another GEP starts from fresh state.
+    return <GepDetailPage key={number} number={number} />;
   }
 
   return <GepSection />;

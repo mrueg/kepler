@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { KepStatus, KepStage } from '../types/kep';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
+import { NONE_SELECTED, checkedItems, toggleSelection } from '../utils/selection';
 
 export interface Filters {
   query: string;
@@ -44,9 +45,6 @@ const STATUSES: KepStatus[] = [
 
 const STAGES: KepStage[] = ['pre-alpha', 'alpha', 'beta', 'stable'];
 
-/** Filter value meaning "every item deselected", so nothing matches. */
-export const NONE_SELECTED = '__none__';
-
 interface CheckboxDropdownProps {
   label: string;
   items: string[];
@@ -83,22 +81,7 @@ export function CheckboxDropdown({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
-  // `selected` is empty when nothing is filtered (all items checked), and
-  // [NONE_SELECTED] when every item is unchecked (nothing matches).
-  const checked = selected.length === 0 ? items : selected.filter((i) => i !== NONE_SELECTED);
-
-  function toggle(item: string) {
-    const next = checked.includes(item)
-      ? checked.filter((i) => i !== item)
-      : [...checked, item];
-    onChange(toSelection(next));
-  }
-
-  function toSelection(next: string[]): string[] {
-    if (next.length === items.length) return [];
-    if (next.length === 0) return [NONE_SELECTED];
-    return next;
-  }
+  const checked = checkedItems(items, selected);
 
   const isFiltered = selected.length > 0;
   const displayLabel = isFiltered ? `${label} (${checked.length})` : label;
@@ -139,7 +122,7 @@ export function CheckboxDropdown({
                 <input
                   type="checkbox"
                   checked={checked.includes(item)}
-                  onChange={() => toggle(item)}
+                  onChange={() => onChange(toggleSelection(items, selected, item))}
                 />
                 <span>{renderItem ? renderItem(item) : item}</span>
               </label>

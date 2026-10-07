@@ -31,9 +31,17 @@ export function readCache<T>(key: string): T | null {
   }
 }
 
+/** Dispatched on `window` whenever this tab writes or clears a cache entry. */
+export const CACHE_CHANGE_EVENT = 'kepler-cache-change';
+
+function notifyCacheChange(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(CACHE_CHANGE_EVENT));
+}
+
 export function setCache<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+    notifyCacheChange();
   } catch {
     // localStorage might be full
   }
@@ -42,8 +50,21 @@ export function setCache<T>(key: string, data: T): void {
 export function clearCache(...keys: string[]): void {
   try {
     for (const key of keys) localStorage.removeItem(key);
+    notifyCacheChange();
   } catch {
     // ignore
+  }
+}
+
+/** Returns when `key` was cached (ms since epoch), regardless of age. */
+export function getCacheTimestamp(key: string): number | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { timestamp } = JSON.parse(raw) as Partial<CacheEntry<unknown>>;
+    return typeof timestamp === 'number' ? timestamp : null;
+  } catch {
+    return null;
   }
 }
 

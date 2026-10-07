@@ -1,72 +1,65 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { CACHE_KEY_KEPS } from '../api/github';
 import { CACHE_KEY_GEPS } from '../api/gatewayapi';
+import { CACHE_CHANGE_EVENT, clearCache, getCacheTimestamp } from '../api/shared';
 
 const CACHE_KEYS = [CACHE_KEY_KEPS, CACHE_KEY_GEPS];
+const MINUTE_MS = 60_000;
 
-function getElapsedMs(): number | null {
-  try {
-    const timestamps: number[] = [];
-    for (const key of CACHE_KEYS) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const entry = JSON.parse(raw) as { timestamp?: number };
-        if (typeof entry.timestamp === 'number') {
-          timestamps.push(entry.timestamp);
-        }
-      }
-    }
-    if (timestamps.length === 0) return null;
-    return Date.now() - Math.min(...timestamps);
-  } catch {
-    return null;
-  }
+function subscribe(onChange: () => void): () => void {
+  window.addEventListener(CACHE_CHANGE_EVENT, onChange);
+  // Other tabs writing the cache.
+  window.addEventListener('storage', onChange);
+  const interval = setInterval(onChange, MINUTE_MS);
+  return () => {
+    window.removeEventListener(CACHE_CHANGE_EVENT, onChange);
+    window.removeEventListener('storage', onChange);
+    clearInterval(interval);
+  };
 }
 
-function formatTimeAgo(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
+/**
+ * Whole minutes since the oldest cached list was fetched, or null when nothing
+ * is cached. Rounded to minutes so the snapshot only changes once a minute.
+ */
+function getMinutesSinceSync(): number | null {
+  const timestamps = CACHE_KEYS.map(getCacheTimestamp).filter((t): t is number => t !== null);
+  if (timestamps.length === 0) return null;
+  return Math.max(0, Math.floor((Date.now() - Math.min(...timestamps)) / MINUTE_MS));
+}
+
+// Nothing is known about the cache while prerendering; render nothing so the
+// server HTML matches the first client render.
+function getServerSnapshot(): null {
+  return null;
+}
+
+function formatTimeAgo(minutes: number): string {
+  if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export function CacheFreshnessIndicator() {
-  const [elapsedMs, setElapsedMs] = useState<number | null>(getElapsedMs);
-  const [refreshing, setRefreshing] = useState(false);
+  const minutes = useSyncExternalStore(subscribe, getMinutesSinceSync, getServerSnapshot);
 
-  useEffect(() => {
-    const interval = setInterval(() => setElapsedMs(getElapsedMs()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
+  function handleRefresh() {
+    clearCache(...CACHE_KEYS);
+    window.location.reload();
+  }
 
-  const handleRefresh = useCallback(() => {
-    try {
-      setRefreshing(true);
-      for (const key of CACHE_KEYS) {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // ignore
-    }
-    // Small delay so the disabled state renders before the page reloads
-    setTimeout(() => window.location.reload(), 50);
-  }, []);
-
-  if (elapsedMs === null) return null;
+  if (minutes === null) return null;
 
   return (
     <span className="cache-freshness">
-      <span className="cache-freshness-label">Last synced: {formatTimeAgo(elapsedMs)}</span>
+      <span className="cache-freshness-label">Last synced: {formatTimeAgo(minutes)}</span>
       <button
         className="cache-refresh-btn"
         onClick={handleRefresh}
-        disabled={refreshing}
         aria-label="Refresh data"
         title="Refresh data"
       >
