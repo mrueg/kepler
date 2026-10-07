@@ -1,22 +1,20 @@
 import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import tseslint from 'typescript-eslint'
+import nextVitals from 'eslint-config-next/core-web-vitals'
+import nextTs from 'eslint-config-next/typescript'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['.next', 'node_modules', 'next-env.d.ts']),
+  globalIgnores(['.next/**', 'out/**', 'next-env.d.ts']),
+  // Must come before the TypeScript config, which turns off base rules
+  // (no-undef, no-unused-vars) that don't understand TypeScript.
+  js.configs.recommended,
+  ...nextVitals,
+  ...nextTs,
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-    ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
+    // eslint-plugin-react's version auto-detection uses context.getFilename(),
+    // which ESLint 10 removed; pin the version so detection is skipped.
+    settings: { react: { version: '19' } },
+    languageOptions: { ecmaVersion: 'latest' },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     },

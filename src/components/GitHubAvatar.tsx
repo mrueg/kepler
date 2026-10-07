@@ -18,13 +18,15 @@ export function GitHubAvatar({ username, size = 24 }: GitHubAvatarProps) {
   }
 
   return (
+    // next/image adds nothing here: the site is a static export with unoptimized images.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
+      // Request 2x resolution for sharp display on high-DPI / retina screens
       src={`https://github.com/${handle}.png?size=${size * 2}`}
       alt={handle}
       width={size}
       height={size}
       className="gh-avatar"
-      // Request 2x resolution for sharp display on high-DPI / retina screens
       onError={() => setImgError(true)}
     />
   );
