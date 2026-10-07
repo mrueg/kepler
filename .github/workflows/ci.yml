@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+  # Called by the deploy workflow so pushes to main are checked before deploying.
+  workflow_call:
 
 permissions:
   contents: read
