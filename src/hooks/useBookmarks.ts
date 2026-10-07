@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react';
 
-const STORAGE_KEY = 'kepler_bookmarks_v1';
+const KEP_STORAGE_KEY = 'kepler_bookmarks_v1';
+const GEP_STORAGE_KEY = 'kepler_gep_bookmarks_v1';
 
 export interface UseBookmarksResult {
   bookmarks: Set<string>;
@@ -10,11 +11,11 @@ export interface UseBookmarksResult {
   isBookmarked: (number: string) => boolean;
 }
 
-export function useBookmarks(): UseBookmarksResult {
+function useBookmarks(storageKey: string): UseBookmarksResult {
   const [bookmarks, setBookmarks] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey);
       return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
     } catch {
       return new Set();
@@ -30,13 +31,13 @@ export function useBookmarks(): UseBookmarksResult {
         next.add(number);
       }
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
       } catch {
         // ignore
       }
       return next;
     });
-  }, []);
+  }, [storageKey]);
 
   const isBookmarked = useCallback(
     (number: string) => bookmarks.has(number),
@@ -44,4 +45,12 @@ export function useBookmarks(): UseBookmarksResult {
   );
 
   return { bookmarks, toggleBookmark, isBookmarked };
+}
+
+export function useKepBookmarks(): UseBookmarksResult {
+  return useBookmarks(KEP_STORAGE_KEY);
+}
+
+export function useGepBookmarks(): UseBookmarksResult {
+  return useBookmarks(GEP_STORAGE_KEY);
 }

@@ -20,6 +20,18 @@ interface SearchAndFilterProps {
   bookmarkCount?: number;
 }
 
+export function hasActiveFilters(filters: Filters): boolean {
+  return Boolean(
+    filters.query ||
+    filters.sig.length > 0 ||
+    filters.status.length > 0 ||
+    filters.stage.length > 0 ||
+    filters.milestone ||
+    filters.stale ||
+    filters.bookmarked,
+  );
+}
+
 const STATUSES: KepStatus[] = [
   'provisional',
   'implementable',
@@ -31,6 +43,9 @@ const STATUSES: KepStatus[] = [
 ];
 
 const STAGES: KepStage[] = ['pre-alpha', 'alpha', 'beta', 'stable'];
+
+/** Filter value meaning "every item deselected", so nothing matches. */
+export const NONE_SELECTED = '__none__';
 
 interface CheckboxDropdownProps {
   label: string;
@@ -55,7 +70,6 @@ export function CheckboxDropdown({
   renderItem,
 }: CheckboxDropdownProps) {
   const [open, setOpen] = useState(false);
-  const [allUnchecked, setAllUnchecked] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,55 +83,31 @@ export function CheckboxDropdown({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
-  function handleToggleOpen() {
-    // When opening with no active filter, reset to "all checked" visual state
-    if (!open && selected.length === 0) setAllUnchecked(false);
-    setOpen((o) => !o);
-  }
-
-  function isChecked(item: string): boolean {
-    if (allUnchecked) return false;
-    if (selected.length === 0) return true;
-    return selected.includes(item);
-  }
+  // `selected` is empty when nothing is filtered (all items checked), and
+  // [NONE_SELECTED] when every item is unchecked (nothing matches).
+  const checked = selected.length === 0 ? items : selected.filter((i) => i !== NONE_SELECTED);
 
   function toggle(item: string) {
-    let currentlyChecked: string[];
-    if (allUnchecked) {
-      currentlyChecked = [];
-    } else if (selected.length === 0) {
-      currentlyChecked = items;
-    } else {
-      currentlyChecked = selected;
-    }
-    let next: string[];
-    if (currentlyChecked.includes(item)) {
-      next = currentlyChecked.filter((i) => i !== item);
-    } else {
-      next = [...currentlyChecked, item];
-    }
-    setAllUnchecked(false);
-    onChange(next.length === items.length ? [] : next);
+    const next = checked.includes(item)
+      ? checked.filter((i) => i !== item)
+      : [...checked, item];
+    onChange(toSelection(next));
   }
 
-  function selectAll() {
-    setAllUnchecked(false);
-    onChange([]);
-  }
-
-  function deselectAll() {
-    setAllUnchecked(true);
-    onChange([]);
+  function toSelection(next: string[]): string[] {
+    if (next.length === items.length) return [];
+    if (next.length === 0) return [NONE_SELECTED];
+    return next;
   }
 
   const isFiltered = selected.length > 0;
-  const displayLabel = isFiltered ? `${label} (${selected.length})` : label;
+  const displayLabel = isFiltered ? `${label} (${checked.length})` : label;
 
   return (
     <div className="checkbox-dropdown" ref={ref}>
       <button
         className={`checkbox-dropdown-btn${isFiltered ? ' checkbox-dropdown-btn--active' : ''}`}
-        onClick={() => handleToggleOpen()}
+        onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
         type="button"
@@ -130,14 +120,14 @@ export function CheckboxDropdown({
           <div className="checkbox-dropdown-actions">
             <button
               className="checkbox-dropdown-action-btn"
-              onClick={selectAll}
+              onClick={() => onChange([])}
               type="button"
             >
               Select All
             </button>
             <button
               className="checkbox-dropdown-action-btn"
-              onClick={deselectAll}
+              onClick={() => onChange([NONE_SELECTED])}
               type="button"
             >
               Deselect All
@@ -148,7 +138,7 @@ export function CheckboxDropdown({
               <label key={item} className="checkbox-dropdown-item">
                 <input
                   type="checkbox"
-                  checked={isChecked(item)}
+                  checked={checked.includes(item)}
                   onChange={() => toggle(item)}
                 />
                 <span>{renderItem ? renderItem(item) : item}</span>
@@ -183,14 +173,7 @@ export function SearchAndFilter({
     onChange({ ...filters, ...patch });
   }
 
-  const hasFilters =
-    filters.query ||
-    filters.sig.length > 0 ||
-    filters.status.length > 0 ||
-    filters.stage.length > 0 ||
-    filters.milestone ||
-    filters.stale ||
-    filters.bookmarked;
+  const hasFilters = hasActiveFilters(filters);
 
   return (
     <div className="search-filter-bar">

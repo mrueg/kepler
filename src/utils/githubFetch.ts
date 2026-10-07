@@ -2,6 +2,9 @@ import { updateRateLimit } from './rateLimitStore';
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+// Don't wait longer than this for a rate limit to reset; fail fast instead so
+// the UI can surface the error rather than hanging for up to an hour.
+const MAX_RETRY_DELAY_MS = 60 * 1000;
 
 /**
  * Reads GitHub rate-limit headers from a response and updates the shared store.
@@ -10,6 +13,9 @@ function captureRateLimitHeaders(response: Response, isRateLimited: boolean): vo
   // Rate limit headers are only meaningful in a browser context where the
   // shared store and CustomEvent dispatch are available.
   if (typeof window === 'undefined') return;
+  // Only GitHub API responses carry these headers (raw.githubusercontent.com
+  // does not); skip others so they don't wipe the last known values.
+  if (!response.headers.has('x-ratelimit-remaining') && !isRateLimited) return;
   const remainingRaw = response.headers.get('x-ratelimit-remaining');
   const limitRaw = response.headers.get('x-ratelimit-limit');
   const resetRaw = response.headers.get('x-ratelimit-reset');
@@ -49,7 +55,9 @@ function getRateLimitDelay(response: Response, attempt: number): number {
  *
  * On a rate-limit response the function waits for the delay indicated by
  * the `Retry-After` or `x-ratelimit-reset` response headers, or falls back
- * to exponential backoff, then retries up to `MAX_RETRIES` times.
+ * to exponential backoff, then retries up to `MAX_RETRIES` times. If the
+ * required delay exceeds `MAX_RETRY_DELAY_MS`, the rate-limited response is
+ * returned immediately.
  */
 export async function githubFetch(
   input: RequestInfo | URL,
@@ -64,12 +72,12 @@ export async function githubFetch(
       (response.status === 403 &&
         response.headers.get('x-ratelimit-remaining') === '0');
 
-    if (!isRateLimited || attempt === MAX_RETRIES) {
+    const delay = isRateLimited ? getRateLimitDelay(response, attempt) : 0;
+    if (!isRateLimited || attempt === MAX_RETRIES || delay > MAX_RETRY_DELAY_MS) {
       captureRateLimitHeaders(response, isRateLimited);
       return response;
     }
 
-    const delay = getRateLimitDelay(response, attempt);
     await new Promise<void>((resolve) => setTimeout(resolve, delay));
   }
   // This is unreachable but satisfies TypeScript

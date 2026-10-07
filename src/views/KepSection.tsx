@@ -6,22 +6,36 @@ import { KepListPage } from './KepListPage';
 import { ReleasePage } from './ReleasePage';
 import { KepStats } from './StatsPage';
 import { WhatsNew } from '../components/WhatsNew';
-import { useKeps } from '../hooks/useKeps';
-import { useRecentKepChanges } from '../hooks/useRecentKepChanges';
+import { TabBar } from '../components/Controls';
+import { useKeps, type UseProposalsResult } from '../hooks/useProposals';
+import { useRecentChanges } from '../hooks/useRecentChanges';
+import { fetchRecentlyChangedKeps } from '../api/github';
+import type { Kep } from '../types/kep';
 
 type Tab = 'list' | 'release' | 'whats-new' | 'stats';
 
-const VALID_TABS: Tab[] = ['list', 'release', 'whats-new', 'stats'];
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'list', label: 'KEPs' },
+  { id: 'release', label: 'Release Timeline' },
+  { id: 'whats-new', label: "What's New" },
+  { id: 'stats', label: 'Stats' },
+];
 
 function isValidTab(value: string | null): value is Tab {
-  return VALID_TABS.includes(value as Tab);
+  return TABS.some((t) => t.id === value);
+}
+
+// Separate component so the git-history requests only run while the tab is open.
+function KepWhatsNew({ data }: { data: UseProposalsResult<Kep> }) {
+  const { changes, loading } = useRecentChanges(fetchRecentlyChangedKeps);
+  return <WhatsNew keps={data.items} recentKepChanges={changes} loading={data.loading || loading} />;
 }
 
 export function KepSection() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
-  const { keps, loading } = useKeps();
-  const { changes: recentKepChanges, loading: gitLoading } = useRecentKepChanges();
+  // Loaded once here and shared by all tabs so the KEP list is only fetched once.
+  const data = useKeps();
 
   const tabParam = searchParams.get('tab');
   const hasVersionParam = searchParams.get('v') !== null;
@@ -49,50 +63,11 @@ export function KepSection() {
 
   return (
     <div>
-      <div className="stats-tabs" role="tablist">
-        <button
-          className={`stats-tab${activeTab === 'list' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('list')}
-          role="tab"
-          aria-selected={activeTab === 'list'}
-          tabIndex={activeTab === 'list' ? 0 : -1}
-        >
-          KEPs
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'release' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('release')}
-          role="tab"
-          aria-selected={activeTab === 'release'}
-          tabIndex={activeTab === 'release' ? 0 : -1}
-        >
-          Release Timeline
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'whats-new' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('whats-new')}
-          role="tab"
-          aria-selected={activeTab === 'whats-new'}
-          tabIndex={activeTab === 'whats-new' ? 0 : -1}
-        >
-          What&apos;s New
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'stats' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('stats')}
-          role="tab"
-          aria-selected={activeTab === 'stats'}
-          tabIndex={activeTab === 'stats' ? 0 : -1}
-        >
-          Stats
-        </button>
-      </div>
-      {activeTab === 'list' && <KepListPage />}
-      {activeTab === 'release' && <ReleasePage />}
-      {activeTab === 'whats-new' && (
-        <WhatsNew keps={keps} recentKepChanges={recentKepChanges} loading={loading || gitLoading} />
-      )}
-      {activeTab === 'stats' && <KepStats />}
+      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} />
+      {activeTab === 'list' && <KepListPage data={data} />}
+      {activeTab === 'release' && <ReleasePage data={data} />}
+      {activeTab === 'whats-new' && <KepWhatsNew data={data} />}
+      {activeTab === 'stats' && <KepStats data={data} />}
     </div>
   );
 }

@@ -2,17 +2,14 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useKeps } from '../hooks/useKeps';
-import { LoadingBar } from '../components/LoadingBar';
+import type { UseProposalsResult } from '../hooks/useProposals';
+import { useSort } from '../hooks/useSort';
+import { LoadStatus } from '../components/LoadingBar';
 import { KepCard } from '../components/KepCard';
-import { KepTable, type SortKey } from '../components/KepTable';
+import { KepTable } from '../components/KepTable';
+import { ViewToggle, type ViewMode } from '../components/Controls';
+import { sortKeps, normalizeVersion, compareVersions, type KepSortKey } from '../utils/kep';
 import type { Kep } from '../types/kep';
-
-function normalizeVersion(v: string | undefined): string | null {
-  if (!v) return null;
-  const match = v.replace(/^v/, '').match(/^(\d+\.\d+)/);
-  return match ? match[1] : null;
-}
 
 interface ReleaseGroup {
   label: string;
@@ -21,7 +18,7 @@ interface ReleaseGroup {
   stage: 'alpha' | 'beta' | 'stable';
 }
 
-export function ReleasePage() {
+export function ReleasePage({ data }: { data: UseProposalsResult<Kep> }) {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   // Keep a ref so the URL-sync effect can read the latest searchParams without
@@ -33,7 +30,7 @@ export function ReleasePage() {
   useEffect(() => {
     searchParamsRef.current = searchParams;
   });
-  const { keps, loading, progress, error, reload } = useKeps();
+  const { items: keps, loading, error } = data;
 
   const allVersions = useMemo(() => {
     const versions = new Set<string>();
@@ -45,32 +42,14 @@ export function ReleasePage() {
       if (beta) versions.add(beta);
       if (stable) versions.add(stable);
     }
-    return Array.from(versions)
-      .map((v): [string, number, number] => {
-        const [maj, min] = v.split('.').map(Number);
-        return [v, maj, min];
-      })
-      .sort(([, aMaj, aMin], [, bMaj, bMin]) =>
-        aMaj !== bMaj ? aMaj - bMaj : aMin - bMin,
-      )
-      .map(([v]) => v);
+    return Array.from(versions).sort(compareVersions);
   }, [keps]);
 
   const [manualVersion, setManualVersion] = useState<string>(
     searchParams.get('v') ?? '',
   );
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  }
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>();
 
   // Derive the effective version: use manual selection if set, otherwise default to latest
   const selectedVersion =
@@ -132,34 +111,10 @@ export function ReleasePage() {
     return seen.size;
   }, [releaseGroups, selectedVersion]);
 
-  const sortedGroups = useMemo(() => {
-    if (!sortKey) return releaseGroups;
-    return releaseGroups.map((group) => ({
-      ...group,
-      keps: [...group.keps].sort((a, b) => {
-        let av = '';
-        let bv = '';
-        if (sortKey === 'title') {
-          av = (a.title || a.slug).toLowerCase();
-          bv = (b.title || b.slug).toLowerCase();
-        } else if (sortKey === 'sig') {
-          av = a.sig.toLowerCase();
-          bv = b.sig.toLowerCase();
-        } else if (sortKey === 'status') {
-          av = (a.status ?? '').toLowerCase();
-          bv = (b.status ?? '').toLowerCase();
-        } else if (sortKey === 'stage') {
-          av = (a.stage ?? '').toLowerCase();
-          bv = (b.stage ?? '').toLowerCase();
-        } else if (sortKey === 'last-updated') {
-          av = (a['last-updated'] ?? a['creation-date'] ?? '').toLowerCase();
-          bv = (b['last-updated'] ?? b['creation-date'] ?? '').toLowerCase();
-        }
-        const cmp = av.localeCompare(bv);
-        return sortDir === 'asc' ? cmp : -cmp;
-      }),
-    }));
-  }, [releaseGroups, sortKey, sortDir]);
+  const sortedGroups = useMemo(
+    () => releaseGroups.map((group) => ({ ...group, keps: sortKeps(group.keps, sortKey, sortDir) })),
+    [releaseGroups, sortKey, sortDir],
+  );
 
   return (
     <div className="release-page">
@@ -192,36 +147,10 @@ export function ReleasePage() {
             {totalKeps} KEP{totalKeps !== 1 ? 's' : ''} with milestone activity in v{selectedVersion}
           </span>
         )}
-        <div className="view-toggle">
-          <button
-            className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-            aria-pressed={viewMode === 'grid'}
-          >
-            ⊞ Grid
-          </button>
-          <button
-            className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-            onClick={() => setViewMode('table')}
-            aria-label="Table view"
-            aria-pressed={viewMode === 'table'}
-          >
-            ☰ Table
-          </button>
-        </div>
+        <ViewToggle value={viewMode} onChange={setViewMode} />
       </div>
 
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading KEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
+      <LoadStatus {...data} noun="KEPs" />
 
       {!loading && !error && selectedVersion && (
         <>
