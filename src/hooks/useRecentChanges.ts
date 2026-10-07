@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { fetchRecentlyChangedGeps, CACHE_KEY_GEP_GIT } from '../api/gatewayapi';
-import type { GitChange } from '../api/gatewayapi';
+import type { GitChange } from '../api/shared';
 
-export interface UseRecentGepChangesResult {
+export interface UseRecentChangesResult {
   changes: GitChange[];
   loading: boolean;
 }
 
-export function useRecentGepChanges(): UseRecentGepChangesResult {
+export function useRecentChanges(fetchChanges: () => Promise<GitChange[]>): UseRecentChangesResult {
   const [changes, setChanges] = useState<GitChange[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +16,7 @@ export function useRecentGepChanges(): UseRecentGepChangesResult {
     async function load() {
       setLoading(true);
       try {
-        const data = await fetchRecentlyChangedGeps();
+        const data = await fetchChanges();
         if (!cancelled) {
           setChanges(data);
         }
@@ -32,9 +31,7 @@ export function useRecentGepChanges(): UseRecentGepChangesResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchChanges]);
 
   return { changes, loading };
 }
-
-export { CACHE_KEY_GEP_GIT };

@@ -1,13 +1,11 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
 import type { Gep } from '../types/gep';
-import type { GitChange } from '../api/github';
-import { StatusBadge } from './Badges';
-import { GEP_STATUS_COLORS } from '../utils/gep';
-import { daysSince } from '../utils/kep';
+import type { GitChange } from '../api/shared';
+import { StatusBadge, GepStatusBadge } from './Badges';
+import { daysSince, kepDisplayTitle } from '../utils/kep';
 
 const MAX_ITEMS = 10;
-const DEFAULT_STATUS_COLOR = '#8b949e';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -65,7 +63,7 @@ export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChan
               <li key={kep.path} className="whats-new-item">
                 <Link href={`/kep?number=${kep.number}`} className="whats-new-link">
                   <span className="whats-new-number">KEP-{kep.number}</span>
-                  <span className="whats-new-item-title">{kep.title || kep.slug.replace(/-/g, ' ')}</span>
+                  <span className="whats-new-item-title">{kepDisplayTitle(kep)}</span>
                 </Link>
                 <div className="whats-new-meta">
                   <StatusBadge status={kep.status} />
@@ -88,12 +86,7 @@ export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChan
                   <span className="whats-new-item-title">{gep.name}</span>
                 </Link>
                 <div className="whats-new-meta">
-                  <span
-                    className="gep-status-badge"
-                    style={{ '--gep-badge-color': GEP_STATUS_COLORS[gep.status] ?? DEFAULT_STATUS_COLOR } as React.CSSProperties}
-                  >
-                    {gep.status}
-                  </span>
+                  <GepStatusBadge status={gep.status} />
                   <RelativeTime date={date} />
                 </div>
               </li>

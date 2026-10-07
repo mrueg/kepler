@@ -2,21 +2,24 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useKeps } from '../hooks/useKeps';
-import { useBookmarks } from '../hooks/useBookmarks';
+import type { UseProposalsResult } from '../hooks/useProposals';
+import { useKepBookmarks } from '../hooks/useBookmarks';
+import { useSort } from '../hooks/useSort';
 import { KepCard } from '../components/KepCard';
-import { KepTable, type SortKey } from '../components/KepTable';
-import { LoadingBar } from '../components/LoadingBar';
-import { SearchAndFilter, type Filters } from '../components/SearchAndFilter';
-import { isStale } from '../utils/kep';
+import { KepTable } from '../components/KepTable';
+import { LoadStatus } from '../components/LoadingBar';
+import { ViewToggle, Pagination, type ViewMode } from '../components/Controls';
+import { SearchAndFilter, hasActiveFilters, type Filters } from '../components/SearchAndFilter';
+import { isStale, sortKeps, compareVersions, type KepSortKey } from '../utils/kep';
+import type { Kep } from '../types/kep';
 
 const PAGE_SIZE = 48;
 
-export function KepListPage() {
+export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
-  const { keps, loading, progress, error, reload } = useKeps();
-  const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
+  const { items: keps, loading, error } = data;
+  const { bookmarks, toggleBookmark, isBookmarked } = useKepBookmarks();
   const [filters, setFilters] = useState<Filters>({
     query: searchParams.get('q') ?? '',
     sig: searchParams.get('sig')?.split(',').filter(Boolean) ?? [],
@@ -30,18 +33,8 @@ export function KepListPage() {
     const p = parseInt(searchParams.get('page') ?? '1', 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [sortKey, setSortKey] = useState<SortKey | undefined>(undefined);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  }
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>();
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -68,14 +61,8 @@ export function KepListPage() {
     const ms = keps
       .map((k) => k['latest-milestone'])
       .filter((m): m is string => Boolean(m));
-    return [...new Set(ms)].sort((a, b) => {
-      // Sort version strings like v1.32 numerically, newest first
-      const parse = (v: string) => {
-        const match = v.match(/^v?(\d+)\.(\d+)$/);
-        return match ? parseInt(match[1]) * 100 + parseInt(match[2]) : -1;
-      };
-      return parse(b) - parse(a);
-    });
+    // Newest first
+    return [...new Set(ms)].sort((a, b) => compareVersions(b, a));
   }, [keps]);
 
   const filtered = useMemo(() => {
@@ -101,31 +88,7 @@ export function KepListPage() {
     });
   }, [keps, filters, isBookmarked]);
 
-  const sorted = useMemo(() => {
-    if (!sortKey) return filtered;
-    return [...filtered].sort((a, b) => {
-      let av = '';
-      let bv = '';
-      if (sortKey === 'title') {
-        av = (a.title || a.slug).toLowerCase();
-        bv = (b.title || b.slug).toLowerCase();
-      } else if (sortKey === 'sig') {
-        av = a.sig.toLowerCase();
-        bv = b.sig.toLowerCase();
-      } else if (sortKey === 'status') {
-        av = (a.status ?? '').toLowerCase();
-        bv = (b.status ?? '').toLowerCase();
-      } else if (sortKey === 'stage') {
-        av = (a.stage ?? '').toLowerCase();
-        bv = (b.stage ?? '').toLowerCase();
-      } else if (sortKey === 'last-updated') {
-        av = (a['last-updated'] ?? a['creation-date'] ?? '').toLowerCase();
-        bv = (b['last-updated'] ?? b['creation-date'] ?? '').toLowerCase();
-      }
-      const cmp = av.localeCompare(bv);
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-  }, [filtered, sortKey, sortDir]);
+  const sorted = useMemo(() => sortKeps(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -143,81 +106,34 @@ export function KepListPage() {
     <div className="list-page">
       <SearchAndFilter filters={filters} sigs={sigs} milestones={milestones} onChange={handleFilterChange} bookmarkCount={bookmarks.size} />
 
-          {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
+      <LoadStatus {...data} noun="KEPs" />
 
-          {error && (
-            <div className="error-box">
-              <strong>Error loading KEPs:</strong> {error}
-              <button className="retry-btn" onClick={reload}>
-                Retry
-              </button>
-            </div>
-          )}
+      {!loading && !error && (
+        <div className="results-header">
+          <span>
+            {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
+            {hasActiveFilters(filters) && ` matching filters`}
+          </span>
+          <ViewToggle value={viewMode} onChange={setViewMode} />
+        </div>
+      )}
 
-          {!loading && !error && (
-            <div className="results-header">
-              <span>
-                {filtered.length} KEP{filtered.length !== 1 ? 's' : ''}
-                {(filters.query || filters.sig.length > 0 || filters.status.length > 0 || filters.stage.length > 0 || filters.milestone || filters.stale || filters.bookmarked) &&
-                  ` matching filters`}
-              </span>
-              <div className="view-toggle">
-                <button
-                  className={`view-toggle-btn${viewMode === 'grid' ? ' view-toggle-btn-active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  aria-label="Grid view"
-                  aria-pressed={viewMode === 'grid'}
-                >
-                  ⊞ Grid
-                </button>
-                <button
-                  className={`view-toggle-btn${viewMode === 'table' ? ' view-toggle-btn-active' : ''}`}
-                  onClick={() => setViewMode('table')}
-                  aria-label="Table view"
-                  aria-pressed={viewMode === 'table'}
-                >
-                  ☰ Table
-                </button>
-              </div>
-            </div>
-          )}
+      {viewMode === 'grid' ? (
+        <div className="kep-grid">
+          {pageKeps.map((kep) => (
+            <KepCard
+              key={kep.path}
+              kep={kep}
+              isBookmarked={isBookmarked(kep.number)}
+              onToggleBookmark={toggleBookmark}
+            />
+          ))}
+        </div>
+      ) : (
+        <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+      )}
 
-          {viewMode === 'grid' ? (
-            <div className="kep-grid">
-              {pageKeps.map((kep) => (
-                <KepCard
-                  key={kep.path}
-                  kep={kep}
-                  isBookmarked={isBookmarked(kep.number)}
-                  onToggleBookmark={toggleBookmark}
-                />
-              ))}
-            </div>
-          ) : (
-            <KepTable keps={pageKeps} isBookmarked={isBookmarked} onToggleBookmark={toggleBookmark} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-          )}
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="page-btn"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ← Previous
-              </button>
-              <span className="page-info">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                className="page-btn"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next →
-              </button>
-            </div>
-          )}
+      <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }

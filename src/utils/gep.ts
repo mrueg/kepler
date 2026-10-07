@@ -9,3 +9,5 @@ export const GEP_STATUS_COLORS: Record<GepStatus, string> = {
   Deferred: '#8b949e',
   Withdrawn: '#9a6700',
 };
+
+export const DEFAULT_STATUS_COLOR = '#8b949e';

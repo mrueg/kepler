@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
-import { StatusBadge, StageBadge, StaleBadge } from './Badges';
-import { isStale } from '../utils/kep';
+import { StatusBadge, StageBadge, StaleBadge, BookmarkButton } from './Badges';
+import { isStale, formatSig, kepDisplayTitle } from '../utils/kep';
 
 interface KepCardProps {
   kep: Kep;
@@ -10,39 +10,23 @@ interface KepCardProps {
 }
 
 export function KepCard({ kep, isBookmarked = false, onToggleBookmark }: KepCardProps) {
-  const sigDisplay = kep.sig.replace(/^sig-/, 'SIG ').replace(/-/g, ' ');
-  const titleSlug = kep.slug.replace(/-/g, ' ');
-  const stale = isStale(kep);
+  // Read the year from the YYYY-MM-DD string; parsing it as a Date would
+  // shift Jan 1 into the previous year west of UTC.
+  const creationYear = kep['creation-date']?.slice(0, 4);
 
   return (
     <Link href={`/kep?number=${kep.number}`} className="kep-card">
       <div className="kep-card-number">KEP-{kep.number}</div>
-      <h3 className="kep-card-title">{kep.title || titleSlug}</h3>
-      <div className="kep-card-sig">{sigDisplay}</div>
+      <h3 className="kep-card-title">{kepDisplayTitle(kep)}</h3>
+      <div className="kep-card-sig">{formatSig(kep.sig)}</div>
       <div className="kep-card-badges">
         <StatusBadge status={kep.status} />
         <StageBadge stage={kep.stage} />
-        {stale && <StaleBadge />}
+        {isStale(kep) && <StaleBadge />}
       </div>
-      {kep['creation-date'] && (
-        <div className="kep-card-date">
-          {new Date(kep['creation-date']).getFullYear()}
-        </div>
-      )}
+      {creationYear && <div className="kep-card-date">{creationYear}</div>}
       {onToggleBookmark && (
-        <button
-          className={`bookmark-star${isBookmarked ? ' bookmark-star-active' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleBookmark(kep.number);
-          }}
-          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-          aria-pressed={isBookmarked}
-          title={isBookmarked ? 'Remove bookmark' : 'Bookmark this KEP'}
-        >
-          {isBookmarked ? '★' : '☆'}
-        </button>
+        <BookmarkButton active={isBookmarked} onToggle={() => onToggleBookmark(kep.number)} noun="KEP" />
       )}
     </Link>
   );

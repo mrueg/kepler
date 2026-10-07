@@ -1,21 +1,7 @@
 import type { KepStatus, KepStage } from '../types/kep';
-
-const STATUS_COLORS: Record<KepStatus, string> = {
-  provisional: '#f59e0b',
-  implementable: '#3b82f6',
-  implemented: '#10b981',
-  deferred: '#6b7280',
-  rejected: '#ef4444',
-  withdrawn: '#9ca3af',
-  replaced: '#8b5cf6',
-};
-
-const STAGE_COLORS: Record<KepStage, string> = {
-  'pre-alpha': '#9ca3af',
-  alpha: '#f59e0b',
-  beta: '#3b82f6',
-  stable: '#10b981',
-};
+import type { GepStatus } from '../types/gep';
+import { KEP_STATUS_COLORS, KEP_STAGE_COLORS } from '../utils/kep';
+import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
 interface BadgeProps {
   text: string;
@@ -45,12 +31,12 @@ function Badge({ text, color }: BadgeProps) {
 
 export function StatusBadge({ status }: { status?: KepStatus }) {
   if (!status) return null;
-  return <Badge text={status} color={STATUS_COLORS[status] ?? '#6b7280'} />;
+  return <Badge text={status} color={KEP_STATUS_COLORS[status] ?? '#6b7280'} />;
 }
 
 export function StageBadge({ stage }: { stage?: KepStage }) {
   if (!stage) return null;
-  return <Badge text={stage} color={STAGE_COLORS[stage] ?? '#6b7280'} />;
+  return <Badge text={stage} color={KEP_STAGE_COLORS[stage] ?? '#6b7280'} />;
 }
 
 export function StaleBadge() {
@@ -58,5 +44,44 @@ export function StaleBadge() {
     <span className="stale-badge" title="This KEP has not been updated in over a year">
       ⚠ Stale
     </span>
+  );
+}
+
+export function GepStatusBadge({ status }: { status?: GepStatus }) {
+  if (!status) return null;
+  const color = GEP_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR;
+  return (
+    <span className="gep-status-badge" style={{ '--gep-badge-color': color } as React.CSSProperties}>
+      {status}
+    </span>
+  );
+}
+
+interface BookmarkButtonProps {
+  active: boolean;
+  onToggle: () => void;
+  /** "KEP" or "GEP", used in the tooltip. */
+  noun: string;
+  /** Detail-page variant: larger, with a text label. */
+  detail?: boolean;
+}
+
+export function BookmarkButton({ active, onToggle, noun, detail = false }: BookmarkButtonProps) {
+  return (
+    <button
+      className={`bookmark-star${detail ? ' bookmark-star-detail' : ''}${active ? ' bookmark-star-active' : ''}`}
+      onClick={(e) => {
+        // Cards wrap the button in a link; don't navigate when toggling.
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      aria-label={active ? 'Remove bookmark' : 'Add bookmark'}
+      aria-pressed={active}
+      title={active ? 'Remove bookmark' : `Bookmark this ${noun}`}
+    >
+      {active ? '★' : '☆'}
+      {detail && (active ? ' Bookmarked' : ' Bookmark')}
+    </button>
   );
 }

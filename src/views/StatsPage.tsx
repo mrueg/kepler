@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -17,34 +17,34 @@ import {
   CartesianGrid,
   LabelList,
 } from 'recharts';
-import { useKeps } from '../hooks/useKeps';
-import { useGeps } from '../hooks/useGeps';
-import { LoadingBar } from '../components/LoadingBar';
-import type { KepStatus } from '../types/kep';
-import type { GepStatus } from '../types/gep';
-
-const STATUS_COLORS: Record<KepStatus, string> = {
-  provisional: '#e2a03f',
-  implementable: '#326ce5',
-  implemented: '#2ea043',
-  deferred: '#8b949e',
-  rejected: '#cf222e',
-  withdrawn: '#9a6700',
-  replaced: '#6e40c9',
-};
-
-const GEP_STATUS_COLORS: Record<GepStatus, string> = {
-  Memorandum: '#6e40c9',
-  Provisional: '#e2a03f',
-  Experimental: '#326ce5',
-  Standard: '#2ea043',
-  Declined: '#cf222e',
-  Deferred: '#8b949e',
-  Withdrawn: '#9a6700',
-};
+import type { UseProposalsResult } from '../hooks/useProposals';
+import { LoadStatus } from '../components/LoadingBar';
+import type { Kep, KepStatus } from '../types/kep';
+import type { Gep, GepStatus } from '../types/gep';
+import { KEP_STATUS_COLORS, normalizeVersion, compareVersions } from '../utils/kep';
+import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
 const TOP_SIGS = 20;
 const TOP_AUTHORS = 15;
+
+const TOOLTIP_STYLE = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  color: 'var(--text)',
+};
+
+/** Counts occurrences of each key and returns them sorted by count, descending. */
+function countBy<T>(items: T[], keysOf: (item: T) => (string | undefined)[]): { key: string; count: number }[] {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    for (const key of keysOf(item)) {
+      if (key) counts[key] = (counts[key] ?? 0) + 1;
+    }
+  }
+  return Object.entries(counts)
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count);
+}
 
 interface HeatmapCell {
   version: string;
@@ -73,46 +73,164 @@ function MilestoneHeatmap({ data }: { data: HeatmapCell[] }) {
   );
 }
 
-export function KepStats() {
-  const { keps, loading, progress, error, reload } = useKeps();
+function StatusCharts({
+  statusData,
+  total,
+  colorFor,
+}: {
+  statusData: { key: string; count: number }[];
+  total: number;
+  colorFor: (status: string) => string;
+}) {
+  return (
+    <>
+      <section className="stats-card">
+        <h2 className="stats-card-title">Status Breakdown</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={statusData}
+              dataKey="count"
+              nameKey="key"
+              cx="50%"
+              cy="45%"
+              outerRadius={100}
+              label={({ name, percent }) =>
+                percent && percent > 0.04
+                  ? `${name} (${(percent * 100).toFixed(0)}%)`
+                  : ''
+              }
+              labelLine={false}
+            >
+              {statusData.map((entry) => (
+                <Cell key={entry.key} fill={colorFor(entry.key)} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value, name) => [value ?? 0, name]} />
+            <Legend
+              formatter={(value) => (
+                <span style={{ color: 'var(--text)', fontSize: 12 }}>
+                  {value}
+                </span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </section>
 
-  const sigData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const kep of keps) {
-      if (kep.sig) counts[kep.sig] = (counts[kep.sig] ?? 0) + 1;
-    }
-    return Object.entries(counts)
-      .map(([sig, count]) => ({ sig, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, TOP_SIGS);
-  }, [keps]);
+      <section className="stats-card">
+        <h2 className="stats-card-title">Status Summary</h2>
+        <table className="stats-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Count</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {statusData.map(({ key, count }) => (
+              <tr key={key}>
+                <td>
+                  <span className="stats-dot" style={{ background: colorFor(key) }} />
+                  {key}
+                </td>
+                <td>{count}</td>
+                <td>{total > 0 ? ((count / total) * 100).toFixed(1) : '0.0'}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </>
+  );
+}
 
-  const yearData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const kep of keps) {
-      const date = kep['creation-date'];
-      if (date) {
-        const year = date.slice(0, 4);
-        if (/^\d{4}$/.test(year)) {
-          counts[year] = (counts[year] ?? 0) + 1;
-        }
-      }
-    }
-    return Object.entries(counts)
-      .map(([year, count]) => ({ year, count }))
-      .sort((a, b) => a.year.localeCompare(b.year));
-  }, [keps]);
+function StageFunnel({
+  title,
+  data,
+  noun,
+  labelWidth,
+}: {
+  title: string;
+  data: { stage: string; count: number; fill: string }[];
+  noun: string;
+  labelWidth: number;
+}) {
+  return (
+    <section className="stats-card stats-card--wide">
+      <h2 className="stats-card-title">{title}</h2>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 8, right: 60, left: 8, bottom: 8 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+          <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+          <YAxis
+            type="category"
+            dataKey="stage"
+            tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+            width={labelWidth}
+          />
+          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [value, noun]} />
+          <Bar dataKey="count" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+            {data.map((entry) => (
+              <Cell key={entry.stage} fill={entry.fill} />
+            ))}
+            <LabelList dataKey="count" position="right" style={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
 
-  const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const kep of keps) {
-      const s = kep.status ?? 'unknown';
-      counts[s] = (counts[s] ?? 0) + 1;
-    }
-    return Object.entries(counts)
-      .map(([status, count]) => ({ status, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [keps]);
+/** Wide bar chart with angled category labels, used for SIG and author rankings. */
+function RankingChart({ title, data }: { title: string; data: { key: string; count: number }[] }) {
+  return (
+    <section className="stats-card stats-card--wide">
+      <h2 className="stats-card-title">{title}</h2>
+      <ResponsiveContainer width="100%" height={320}>
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis
+            dataKey="key"
+            tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+            angle={-40}
+            textAnchor="end"
+            interval={0}
+          />
+          <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
+
+export function KepStats({ data }: { data: UseProposalsResult<Kep> }) {
+  const { items: keps, loading, error } = data;
+
+  const sigData = useMemo(() => countBy(keps, (k) => [k.sig]).slice(0, TOP_SIGS), [keps]);
+
+  const yearData = useMemo(
+    () =>
+      countBy(keps, (k) => {
+        const year = k['creation-date']?.slice(0, 4);
+        return [year && /^\d{4}$/.test(year) ? year : undefined];
+      })
+        .map(({ key, count }) => ({ year: key, count }))
+        .sort((a, b) => a.year.localeCompare(b.year)),
+    [keps],
+  );
+
+  const statusData = useMemo(() => countBy(keps, (k) => [k.status ?? 'unknown']), [keps]);
 
   const stageFunnelData = useMemo(() => {
     const withAlpha = keps.filter((k) => k.milestone?.alpha).length;
@@ -146,43 +264,19 @@ export function KepStats() {
       .sort((a, b) => a.releases - b.releases);
   }, [keps]);
 
-  const authorData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const kep of keps) {
-      for (const author of kep.authors ?? []) {
-        counts[author] = (counts[author] ?? 0) + 1;
-      }
-    }
-    return Object.entries(counts)
-      .map(([author, count]) => ({ author, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, TOP_AUTHORS);
-  }, [keps]);
+  const authorData = useMemo(() => countBy(keps, (k) => k.authors ?? []).slice(0, TOP_AUTHORS), [keps]);
 
-  const milestoneHeatmapData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    function addVersion(v: string | undefined) {
-      if (!v) return;
-      const match = v.replace(/^v/, '').match(/^(\d+\.\d+)/);
-      if (match) {
-        const ver = match[1];
-        counts[ver] = (counts[ver] ?? 0) + 1;
-      }
-    }
-    for (const kep of keps) {
-      addVersion(kep['latest-milestone']);
-      addVersion(kep.milestone?.alpha);
-      addVersion(kep.milestone?.beta);
-      addVersion(kep.milestone?.stable);
-    }
-    return Object.entries(counts)
-      .map(([version, count]) => ({ version, count }))
-      .sort((a, b) => {
-        const [aMaj, aMin] = a.version.split('.').map(Number);
-        const [bMaj, bMin] = b.version.split('.').map(Number);
-        return aMaj !== bMaj ? aMaj - bMaj : aMin - bMin;
-      });
-  }, [keps]);
+  const milestoneHeatmapData = useMemo(
+    () =>
+      countBy(keps, (k) =>
+        [k['latest-milestone'], k.milestone?.alpha, k.milestone?.beta, k.milestone?.stable].map(
+          (v) => normalizeVersion(v) ?? undefined,
+        ),
+      )
+        .map(({ key, count }) => ({ version: key, count }))
+        .sort((a, b) => compareVersions(a.version, b.version)),
+    [keps],
+  );
 
   return (
     <>
@@ -190,48 +284,11 @@ export function KepStats() {
         A high-level view of {keps.length} Kubernetes Enhancement Proposals
       </p>
 
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading KEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
+      <LoadStatus {...data} noun="KEPs" />
 
       {!loading && !error && (
         <div className="stats-grid">
-          <section className="stats-card stats-card--wide">
-            <h2 className="stats-card-title">
-              KEP Distribution by SIG (Top {TOP_SIGS})
-            </h2>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart
-                data={sigData}
-                margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="sig"
-                  tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
-                  angle={-40}
-                  textAnchor="end"
-                  interval={0}
-                />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                  }}
-                />
-                <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
+          <RankingChart title={`KEP Distribution by SIG (Top ${TOP_SIGS})`} data={sigData} />
 
           <section className="stats-card stats-card--wide">
             <h2 className="stats-card-title">KEPs Created per Year</h2>
@@ -246,13 +303,7 @@ export function KepStats() {
                   tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
                 />
                 <YAxis tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                  }}
-                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
                 <Line
                   type="monotone"
                   dataKey="count"
@@ -265,82 +316,11 @@ export function KepStats() {
             </ResponsiveContainer>
           </section>
 
-          <section className="stats-card">
-            <h2 className="stats-card-title">Status Breakdown</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={100}
-                  label={({ name, percent }) =>
-                    percent && percent > 0.04
-                      ? `${name} (${(percent * 100).toFixed(0)}%)`
-                      : ''
-                  }
-                  labelLine={false}
-                >
-                  {statusData.map((entry) => (
-                    <Cell
-                      key={entry.status}
-                      fill={
-                        STATUS_COLORS[entry.status as KepStatus] ?? '#8b949e'
-                      }
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                  }}
-                  formatter={(value, name) => [value ?? 0, name]}
-                />
-                <Legend
-                  formatter={(value) => (
-                    <span style={{ color: 'var(--text)', fontSize: 12 }}>
-                      {value}
-                    </span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </section>
-
-          <section className="stats-card">
-            <h2 className="stats-card-title">Status Summary</h2>
-            <table className="stats-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Count</th>
-                  <th>Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statusData.map(({ status, count }) => (
-                  <tr key={status}>
-                    <td>
-                      <span
-                        className="stats-dot"
-                        style={{
-                          background:
-                            STATUS_COLORS[status as KepStatus] ?? '#8b949e',
-                        }}
-                      />
-                      {status}
-                    </td>
-                    <td>{count}</td>
-                    <td>{keps.length > 0 ? ((count / keps.length) * 100).toFixed(1) : '0.0'}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+          <StatusCharts
+            statusData={statusData}
+            total={keps.length}
+            colorFor={(s) => KEP_STATUS_COLORS[s as KepStatus] ?? DEFAULT_STATUS_COLOR}
+          />
 
           {milestoneHeatmapData.length > 0 && (
             <section className="stats-card stats-card--wide">
@@ -349,40 +329,13 @@ export function KepStats() {
             </section>
           )}
 
-          {stageFunnelData[0].count > 0 && (
-            <section className="stats-card stats-card--wide">
-              <h2 className="stats-card-title">Stage Funnel — KEP Progression (alpha → beta → stable)</h2>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart
-                  data={stageFunnelData}
-                  layout="vertical"
-                  margin={{ top: 8, right: 60, left: 8, bottom: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-                  <YAxis
-                    type="category"
-                    dataKey="stage"
-                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
-                    width={130}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
-                    formatter={(value) => [value, 'KEPs']}
-                  />
-                  <Bar dataKey="count" radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                    {stageFunnelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                    <LabelList dataKey="count" position="right" style={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
+          {keps.length > 0 && (
+            <StageFunnel
+              title="Stage Funnel — KEP Progression (alpha → beta → stable)"
+              data={stageFunnelData}
+              noun="KEPs"
+              labelWidth={130}
+            />
           )}
 
           {timeToStableData.length > 0 && (
@@ -403,11 +356,7 @@ export function KepStats() {
                   />
                   <YAxis tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
                   <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
+                    contentStyle={TOOLTIP_STYLE}
                     formatter={(value, _name, props) => [
                       value,
                       `KEPs (${props.payload.releases} release${props.payload.releases !== 1 ? 's' : ''})`,
@@ -420,35 +369,7 @@ export function KepStats() {
           )}
 
           {authorData.length > 0 && (
-            <section className="stats-card stats-card--wide">
-              <h2 className="stats-card-title">
-                Top Authors (Top {TOP_AUTHORS})
-              </h2>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart
-                  data={authorData}
-                  margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="author"
-                    tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
-                    angle={-40}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
-                  />
-                  <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
+            <RankingChart title={`Top Authors (Top ${TOP_AUTHORS})`} data={authorData} />
           )}
         </div>
       )}
@@ -456,19 +377,10 @@ export function KepStats() {
   );
 }
 
-export function GepStats() {
-  const { geps, loading, progress, error, reload } = useGeps();
+export function GepStats({ data }: { data: UseProposalsResult<Gep> }) {
+  const { items: geps, loading, error } = data;
 
-  const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const gep of geps) {
-      const s = gep.status ?? 'unknown';
-      counts[s] = (counts[s] ?? 0) + 1;
-    }
-    return Object.entries(counts)
-      .map(([status, count]) => ({ status, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [geps]);
+  const statusData = useMemo(() => countBy(geps, (g) => [g.status ?? 'unknown']), [geps]);
 
   const gepStageFunnelData = useMemo(() => {
     const provisional = geps.filter((g) =>
@@ -487,18 +399,7 @@ export function GepStats() {
     ];
   }, [geps]);
 
-  const authorData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const gep of geps) {
-      for (const author of gep.authors ?? []) {
-        counts[author] = (counts[author] ?? 0) + 1;
-      }
-    }
-    return Object.entries(counts)
-      .map(([author, count]) => ({ author, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, TOP_AUTHORS);
-  }, [geps]);
+  const authorData = useMemo(() => countBy(geps, (g) => g.authors ?? []).slice(0, TOP_AUTHORS), [geps]);
 
   return (
     <>
@@ -506,198 +407,30 @@ export function GepStats() {
         A high-level view of {geps.length} Gateway API Enhancement Proposals
       </p>
 
-      {loading && <LoadingBar loaded={progress.loaded} total={progress.total} />}
-
-      {error && (
-        <div className="error-box">
-          <strong>Error loading GEPs:</strong> {error}
-          <button className="retry-btn" onClick={reload}>
-            Retry
-          </button>
-        </div>
-      )}
+      <LoadStatus {...data} noun="GEPs" />
 
       {!loading && !error && (
         <div className="stats-grid">
-          <section className="stats-card">
-            <h2 className="stats-card-title">Status Breakdown</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={100}
-                  label={({ name, percent }) =>
-                    percent && percent > 0.04
-                      ? `${name} (${(percent * 100).toFixed(0)}%)`
-                      : ''
-                  }
-                  labelLine={false}
-                >
-                  {statusData.map((entry) => (
-                    <Cell
-                      key={entry.status}
-                      fill={
-                        GEP_STATUS_COLORS[entry.status as GepStatus] ?? '#8b949e'
-                      }
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                  }}
-                  formatter={(value, name) => [value ?? 0, name]}
-                />
-                <Legend
-                  formatter={(value) => (
-                    <span style={{ color: 'var(--text)', fontSize: 12 }}>
-                      {value}
-                    </span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </section>
-
-          <section className="stats-card">
-            <h2 className="stats-card-title">Status Summary</h2>
-            <table className="stats-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Count</th>
-                  <th>Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statusData.map(({ status, count }) => (
-                  <tr key={status}>
-                    <td>
-                      <span
-                        className="stats-dot"
-                        style={{
-                          background:
-                            GEP_STATUS_COLORS[status as GepStatus] ?? '#8b949e',
-                        }}
-                      />
-                      {status}
-                    </td>
-                    <td>{count}</td>
-                    <td>{geps.length > 0 ? ((count / geps.length) * 100).toFixed(1) : '0.0'}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+          <StatusCharts
+            statusData={statusData}
+            total={geps.length}
+            colorFor={(s) => GEP_STATUS_COLORS[s as GepStatus] ?? DEFAULT_STATUS_COLOR}
+          />
 
           {gepStageFunnelData.length > 0 && (
-            <section className="stats-card stats-card--wide">
-              <h2 className="stats-card-title">Stage Funnel — GEP Progression (Provisional → Experimental → Standard)</h2>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart
-                  data={gepStageFunnelData}
-                  layout="vertical"
-                  margin={{ top: 8, right: 60, left: 8, bottom: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-                  <YAxis
-                    type="category"
-                    dataKey="stage"
-                    tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
-                    width={160}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
-                    formatter={(value) => [value, 'GEPs']}
-                  />
-                  <Bar dataKey="count" radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                    {gepStageFunnelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                    <LabelList dataKey="count" position="right" style={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
+            <StageFunnel
+              title="Stage Funnel — GEP Progression (Provisional → Experimental → Standard)"
+              data={gepStageFunnelData}
+              noun="GEPs"
+              labelWidth={160}
+            />
           )}
 
           {authorData.length > 0 && (
-            <section className="stats-card stats-card--wide">
-              <h2 className="stats-card-title">
-                Top Authors (Top {TOP_AUTHORS})
-              </h2>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart
-                  data={authorData}
-                  margin={{ top: 8, right: 16, left: 0, bottom: 80 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="author"
-                    tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
-                    angle={-40}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                    }}
-                  />
-                  <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
+            <RankingChart title={`Top Authors (Top ${TOP_AUTHORS})`} data={authorData} />
           )}
         </div>
       )}
     </>
-  );
-}
-
-export function StatsPage() {
-  const [activeTab, setActiveTab] = useState<'keps' | 'geps'>('keps');
-
-  return (
-    <div className="stats-page">
-      <h1 className="stats-title">Analytics Dashboard</h1>
-
-      <div className="stats-tabs" role="tablist">
-        <button
-          className={`stats-tab${activeTab === 'keps' ? ' stats-tab--active' : ''}`}
-          onClick={() => setActiveTab('keps')}
-          aria-selected={activeTab === 'keps'}
-          role="tab"
-          tabIndex={activeTab === 'keps' ? 0 : -1}
-        >
-          KEPs
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'geps' ? ' stats-tab--active' : ''}`}
-          onClick={() => setActiveTab('geps')}
-          aria-selected={activeTab === 'geps'}
-          role="tab"
-          tabIndex={activeTab === 'geps' ? 0 : -1}
-        >
-          GEPs
-        </button>
-      </div>
-
-      {activeTab === 'keps' ? <KepStats /> : <GepStats />}
-    </div>
   );
 }

@@ -5,22 +5,35 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GepListPage } from './GepListPage';
 import { GepStats } from './StatsPage';
 import { WhatsNew } from '../components/WhatsNew';
-import { useGeps } from '../hooks/useGeps';
-import { useRecentGepChanges } from '../hooks/useRecentGepChanges';
+import { TabBar } from '../components/Controls';
+import { useGeps, type UseProposalsResult } from '../hooks/useProposals';
+import { useRecentChanges } from '../hooks/useRecentChanges';
+import { fetchRecentlyChangedGeps } from '../api/gatewayapi';
+import type { Gep } from '../types/gep';
 
 type Tab = 'list' | 'whats-new' | 'stats';
 
-const VALID_TABS: Tab[] = ['list', 'whats-new', 'stats'];
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'list', label: 'GEPs' },
+  { id: 'whats-new', label: "What's New" },
+  { id: 'stats', label: 'Stats' },
+];
 
 function isValidTab(value: string | null): value is Tab {
-  return VALID_TABS.includes(value as Tab);
+  return TABS.some((t) => t.id === value);
+}
+
+// Separate component so the git-history requests only run while the tab is open.
+function GepWhatsNew({ data }: { data: UseProposalsResult<Gep> }) {
+  const { changes, loading } = useRecentChanges(fetchRecentlyChangedGeps);
+  return <WhatsNew geps={data.items} recentGepChanges={changes} loading={data.loading || loading} />;
 }
 
 export function GepSection() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
-  const { geps, loading } = useGeps();
-  const { changes: recentGepChanges, loading: gitLoading } = useRecentGepChanges();
+  // Loaded once here and shared by all tabs so the GEP list is only fetched once.
+  const data = useGeps();
 
   const tabParam = searchParams.get('tab');
   const activeTab: Tab = isValidTab(tabParam) ? tabParam : 'list';
@@ -36,40 +49,10 @@ export function GepSection() {
 
   return (
     <div>
-      <div className="stats-tabs" role="tablist">
-        <button
-          className={`stats-tab${activeTab === 'list' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('list')}
-          role="tab"
-          aria-selected={activeTab === 'list'}
-          tabIndex={activeTab === 'list' ? 0 : -1}
-        >
-          GEPs
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'whats-new' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('whats-new')}
-          role="tab"
-          aria-selected={activeTab === 'whats-new'}
-          tabIndex={activeTab === 'whats-new' ? 0 : -1}
-        >
-          What&apos;s New
-        </button>
-        <button
-          className={`stats-tab${activeTab === 'stats' ? ' stats-tab--active' : ''}`}
-          onClick={() => handleTabChange('stats')}
-          role="tab"
-          aria-selected={activeTab === 'stats'}
-          tabIndex={activeTab === 'stats' ? 0 : -1}
-        >
-          Stats
-        </button>
-      </div>
-      {activeTab === 'list' && <GepListPage />}
-      {activeTab === 'whats-new' && (
-        <WhatsNew geps={geps} recentGepChanges={recentGepChanges} loading={loading || gitLoading} />
-      )}
-      {activeTab === 'stats' && <GepStats />}
+      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} />
+      {activeTab === 'list' && <GepListPage data={data} />}
+      {activeTab === 'whats-new' && <GepWhatsNew data={data} />}
+      {activeTab === 'stats' && <GepStats data={data} />}
     </div>
   );
 }

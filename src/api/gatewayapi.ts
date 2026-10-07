@@ -1,42 +1,35 @@
 import { load as yamlLoad } from 'js-yaml';
 import type { Gep, GepMetadata } from '../types/gep';
 import { githubFetch } from '../utils/githubFetch';
+import {
+  GITHUB_API_BASE,
+  getCached,
+  setCache,
+  fetchTreePaths,
+  fetchAllBatched,
+  fetchText,
+  fetchRecentlyChanged,
+  fetchReviewStatus,
+  fetchCIStatus,
+  normalizePRState,
+  type GitChange,
+  type PRInfo,
+} from './shared';
 
-const GITHUB_RAW_BASE =
-  'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main';
-const GITHUB_API_BASE = 'https://api.github.com';
+const REPO = 'kubernetes-sigs/gateway-api';
+const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/main`;
 export const CACHE_KEY_GEPS = 'kepler_geps_v2';
 export const CACHE_KEY_GEP_TREE = 'kepler_gep_tree_v1';
+const CACHE_KEY_GEP_GIT = 'kepler_gep_git_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_GEPS = 6 * 60 * 60 * 1000; // 6 hours
 
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
-
-function getCached<T>(key: string, ttl: number): T | null {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const entry: CacheEntry<T> = JSON.parse(raw);
-    if (Date.now() - entry.timestamp < ttl) return entry.data;
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function setCache<T>(key: string, data: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch {
-    // localStorage might be full
-  }
-}
+const GEP_PATH_PATTERN = /^geps\/gep-(\d+)\/metadata\.yaml$/;
+// Matches GEP file paths like: geps/gep-<number>/...
+const GEP_FILE_PATTERN = /^geps\/gep-(\d+)\//;
 
 export function parseGepPath(path: string): { number: string } | null {
-  const match = path.match(/^geps\/gep-(\d+)\/metadata\.yaml$/);
+  const match = path.match(GEP_PATH_PATTERN);
   if (!match) return null;
   return { number: match[1] };
 }
@@ -45,43 +38,19 @@ export function buildGepPath(number: string): string {
   return `geps/gep-${number}/metadata.yaml`;
 }
 
-export async function fetchGepPaths(): Promise<string[]> {
-  const cached = getCached<string[]>(CACHE_KEY_GEP_TREE, CACHE_TTL_TREE);
-  if (cached) return cached;
-
-  const response = await githubFetch(
-    `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/git/trees/HEAD?recursive=1`,
-  );
-  if (!response.ok)
-    throw new Error(
-      `GitHub API error: ${response.status} ${response.statusText}`,
-    );
-
-  const data = (await response.json()) as {
-    tree: { path: string; type: string }[];
-  };
-  const paths = data.tree
-    .filter(
-      (item) =>
-        item.type === 'blob' &&
-        /^geps\/gep-\d+\/metadata\.yaml$/.test(item.path),
-    )
-    .map((item) => item.path);
-
-  setCache(CACHE_KEY_GEP_TREE, paths);
-  return paths;
+export function fetchGepPaths(): Promise<string[]> {
+  return fetchTreePaths(REPO, GEP_PATH_PATTERN, CACHE_KEY_GEP_TREE, CACHE_TTL_TREE);
 }
 
 export async function fetchGepYaml(path: string): Promise<Gep> {
-  const [response, contentResponse] = await Promise.all([
+  const [response, content] = await Promise.all([
     githubFetch(`${GITHUB_RAW_BASE}/${path}`),
-    githubFetch(`${GITHUB_RAW_BASE}/${path.replace('/metadata.yaml', '/index.md')}`).catch(() => null),
+    fetchText(`${GITHUB_RAW_BASE}/${path.replace('/metadata.yaml', '/index.md')}`),
   ]);
   if (!response.ok)
     throw new Error(`Failed to fetch ${path}: ${response.status}`);
 
   const text = await response.text();
-  const content = contentResponse?.ok ? await contentResponse.text() : undefined;
 
   const metadata = yamlLoad(text) as GepMetadata | null;
   if (!metadata || typeof metadata.number === 'undefined' || !metadata.name) {
@@ -92,85 +61,21 @@ export async function fetchGepYaml(path: string): Promise<Gep> {
   return {
     ...metadata,
     path,
-    githubUrl: `https://github.com/kubernetes-sigs/gateway-api/tree/main/${dirPath}`,
-    ...(content !== undefined ? { content } : {}),
+    githubUrl: `https://github.com/${REPO}/tree/main/${dirPath}`,
+    ...(content !== null ? { content } : {}),
   };
 }
 
-export async function fetchGepContent(gepPath: string): Promise<string | null> {
+export function fetchGepContent(gepPath: string): Promise<string | null> {
   const dirPath = gepPath.slice(0, gepPath.lastIndexOf('/'));
-  const contentUrl = `${GITHUB_RAW_BASE}/${dirPath}/index.md`;
-  try {
-    const response = await githubFetch(contentUrl);
-    if (!response.ok) return null;
-    return await response.text();
-  } catch {
-    return null;
-  }
+  return fetchText(`${GITHUB_RAW_BASE}/${dirPath}/index.md`);
 }
-
-export interface GitChange {
-  number: string;
-  date: Date;
-}
-
-export const CACHE_KEY_GEP_GIT = 'kepler_gep_git_v1';
-const CACHE_TTL_GIT = 60 * 60 * 1000; // 1 hour
-
-// Matches GEP file paths like: geps/gep-<number>/...
-const GEP_FILE_PATTERN = /^geps\/gep-(\d+)\//;
 
 /**
- * Returns the last 10 GEPs changed in git history, most-recent first.
+ * Returns the last `limit` GEPs changed in git history, most-recent first.
  */
-export async function fetchRecentlyChangedGeps(limit = 10): Promise<GitChange[]> {
-  const cached = getCached<{ number: string; date: string }[]>(CACHE_KEY_GEP_GIT, CACHE_TTL_GIT);
-  if (cached) return cached.map((c) => ({ number: c.number, date: new Date(c.date) }));
-
-  const commitsResp = await githubFetch(
-    `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits?path=geps/&per_page=100`,
-  );
-  if (!commitsResp.ok) return [];
-
-  const commits = (await commitsResp.json()) as Array<{
-    sha: string;
-    commit: { author: { date: string } };
-  }>;
-
-  const seen = new Set<string>();
-  const results: GitChange[] = [];
-  const CONCURRENCY = 10;
-
-  for (let i = 0; i < commits.length && results.length < limit; i += CONCURRENCY) {
-    const batch = commits.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.allSettled(
-      batch.map(async (c) => {
-        const resp = await githubFetch(
-          `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${c.sha}`,
-        );
-        if (!resp.ok) return null;
-        const data = (await resp.json()) as { files: Array<{ filename: string }> };
-        return { date: new Date(c.commit.author.date), files: data.files ?? [] };
-      }),
-    );
-
-    for (const result of batchResults) {
-      if (result.status !== 'fulfilled' || !result.value) continue;
-      const { date, files } = result.value;
-      for (const file of files) {
-        const match = file.filename.match(GEP_FILE_PATTERN);
-        if (match && !seen.has(match[1])) {
-          seen.add(match[1]);
-          results.push({ number: match[1], date });
-          if (results.length >= limit) break;
-        }
-      }
-      if (results.length >= limit) break;
-    }
-  }
-
-  setCache(CACHE_KEY_GEP_GIT, results.map((r) => ({ number: r.number, date: r.date.toISOString() })));
-  return results;
+export function fetchRecentlyChangedGeps(limit = 10): Promise<GitChange[]> {
+  return fetchRecentlyChanged(REPO, 'geps/', GEP_FILE_PATTERN, CACHE_KEY_GEP_GIT, limit);
 }
 
 export async function fetchAllGeps(
@@ -183,43 +88,13 @@ export async function fetchAllGeps(
   }
 
   const paths = await fetchGepPaths();
-  const validPaths = paths.filter((p) => parseGepPath(p) !== null);
-  const total = validPaths.length;
-  const results: Gep[] = [];
-  const CONCURRENCY = 15;
-
-  for (let i = 0; i < validPaths.length; i += CONCURRENCY) {
-    const batch = validPaths.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.allSettled(
-      batch.map((path) => fetchGepYaml(path)),
-    );
-
-    for (const result of batchResults) {
-      if (result.status === 'fulfilled') {
-        results.push(result.value);
-      }
-    }
-
-    onProgress?.(Math.min(i + CONCURRENCY, total), total);
-  }
+  const results = await fetchAllBatched(paths, fetchGepYaml, onProgress);
 
   results.sort((a, b) => Number(b.number) - Number(a.number));
   // Strip content before caching to avoid exceeding localStorage size limits
   const gepsToCache = results.map(({ content: _content, ...gep }) => gep);
   setCache(CACHE_KEY_GEPS, gepsToCache);
   return results;
-}
-
-export interface GepPRInfo {
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  html_url: string;
-  draft: boolean;
-  merged_at: string | null;
-  user: { login: string };
-  ciStatus: 'pending' | 'success' | 'failure' | 'unknown';
-  reviewStatus: 'approved' | 'changes_requested' | 'pending' | 'none';
 }
 
 /**
@@ -229,7 +104,7 @@ export interface GepPRInfo {
  */
 export async function fetchGatewayApiPRs(
   changelogUrls: string[],
-): Promise<GepPRInfo[]> {
+): Promise<PRInfo[]> {
   const prNumbers = changelogUrls
     .map((url) => {
       const m = url.match(/kubernetes-sigs\/gateway-api\/pull\/(\d+)/);
@@ -237,126 +112,59 @@ export async function fetchGatewayApiPRs(
     })
     .filter((n): n is number => n !== null);
 
-  if (prNumbers.length === 0) return [];
-
-  const results: GepPRInfo[] = await Promise.all(
-    prNumbers.map(async (prNum) => {
-      let title = `PR #${prNum}`;
-      let state: 'open' | 'closed' = 'closed';
-      let draft = false;
-      let merged_at: string | null = null;
-      let user = { login: '' };
-      let ciStatus: GepPRInfo['ciStatus'] = 'unknown';
-      let reviewStatus: GepPRInfo['reviewStatus'] = 'none';
+  return Promise.all(
+    prNumbers.map(async (prNum): Promise<PRInfo> => {
+      const info: PRInfo = {
+        number: prNum,
+        title: `PR #${prNum}`,
+        state: 'closed',
+        html_url: `https://github.com/${REPO}/pull/${prNum}`,
+        draft: false,
+        merged_at: null,
+        user: { login: '' },
+        ciStatus: 'unknown',
+        reviewStatus: 'none',
+      };
 
       try {
-        const prResp = await githubFetch(
-          `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}`,
-        );
+        const prResp = await githubFetch(`${GITHUB_API_BASE}/repos/${REPO}/pulls/${prNum}`);
         if (prResp.ok) {
           const pr = (await prResp.json()) as {
-            number: number;
             title: string;
             state: string;
-            html_url: string;
             draft: boolean;
             merged_at: string | null;
             user: { login: string };
             head: { sha: string };
           };
-          title = pr.title;
-          state = (pr.state === 'open' || pr.state === 'closed') ? pr.state : 'closed';
-          draft = pr.draft ?? false;
-          merged_at = pr.merged_at;
-          user = pr.user;
-
-          // Reviews
-          try {
-            const reviewsResp = await githubFetch(
-              `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/pulls/${prNum}/reviews`,
-            );
-            if (reviewsResp.ok) {
-              const reviews = (await reviewsResp.json()) as { state: string; user: { login: string } }[];
-              const latestByReviewer: Record<string, string> = {};
-              for (const review of reviews) {
-                if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED') {
-                  latestByReviewer[review.user.login] = review.state;
-                }
-              }
-              const states = Object.values(latestByReviewer);
-              if (states.includes('CHANGES_REQUESTED')) reviewStatus = 'changes_requested';
-              else if (states.includes('APPROVED')) reviewStatus = 'approved';
-              else if (reviews.length > 0 && !merged_at) reviewStatus = 'pending';
-            }
-          } catch {
-            // optional
-          }
-
-          // CI check runs
-          try {
-            const checksResp = await githubFetch(
-              `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/commits/${pr.head.sha}/check-runs`,
-            );
-            if (checksResp.ok) {
-              const checksData = (await checksResp.json()) as {
-                check_runs: { conclusion: string | null; status: string }[];
-              };
-              const runs = checksData.check_runs;
-              if (runs.length > 0) {
-                if (runs.some((r) => r.status !== 'completed')) {
-                  ciStatus = 'pending';
-                } else if (
-                  runs.every(
-                    (r) =>
-                      r.conclusion === 'success' ||
-                      r.conclusion === 'skipped' ||
-                      r.conclusion === 'neutral',
-                  )
-                ) {
-                  ciStatus = 'success';
-                } else {
-                  ciStatus = 'failure';
-                }
-              }
-            }
-          } catch {
-            // optional
-          }
+          info.title = pr.title;
+          info.state = normalizePRState(pr.state);
+          info.draft = pr.draft ?? false;
+          info.merged_at = pr.merged_at;
+          info.user = pr.user;
+          [info.reviewStatus, info.ciStatus] = await Promise.all([
+            fetchReviewStatus(REPO, prNum, pr.merged_at !== null),
+            fetchCIStatus(REPO, pr.head.sha),
+          ]);
         } else {
           // PR might be closed — try issues endpoint for merged PRs
-          const issueResp = await githubFetch(
-            `${GITHUB_API_BASE}/repos/kubernetes-sigs/gateway-api/issues/${prNum}`,
-          );
+          const issueResp = await githubFetch(`${GITHUB_API_BASE}/repos/${REPO}/issues/${prNum}`);
           if (issueResp.ok) {
             const issue = (await issueResp.json()) as {
               title: string;
-              state: string;
               user: { login: string };
               pull_request?: { merged_at: string | null };
             };
-            title = issue.title;
-            state = 'closed';
-            merged_at = issue.pull_request?.merged_at ?? null;
-            user = issue.user;
+            info.title = issue.title;
+            info.merged_at = issue.pull_request?.merged_at ?? null;
+            info.user = issue.user;
           }
         }
       } catch {
         // ignore
       }
 
-      return {
-        number: prNum,
-        title,
-        state,
-        html_url: `https://github.com/kubernetes-sigs/gateway-api/pull/${prNum}`,
-        draft,
-        merged_at,
-        user,
-        ciStatus,
-        reviewStatus,
-      };
+      return info;
     }),
   );
-
-  return results;
 }
