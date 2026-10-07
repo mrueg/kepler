@@ -137,7 +137,7 @@ export function GepDetailPage({ number }: { number: string }) {
         <GitHubLink href={gep.githubUrl} />
       </div>
 
-      {content && <MarkdownSection title="Content" markdown={content} />}
+      {content && <MarkdownSection title="Content" markdown={content} githubDirUrl={gep.githubUrl} />}
     </div>
   );
 }

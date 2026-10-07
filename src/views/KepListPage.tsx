@@ -1,22 +1,22 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, useDeferredValue } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { UseProposalsResult } from '../hooks/useProposals';
 import { useKepBookmarks } from '../hooks/useBookmarks';
 import { useSort } from '../hooks/useSort';
+import { useUrlSync } from '../hooks/useUrlSync';
 import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
 import { LoadStatus } from '../components/LoadingBar';
 import { ViewToggle, Pagination, type ViewMode } from '../components/Controls';
 import { SearchAndFilter, hasActiveFilters, type Filters } from '../components/SearchAndFilter';
-import { isStale, sortKeps, compareVersions, type KepSortKey } from '../utils/kep';
+import { isStale, sortKeps, compareVersions, kepSearchText, type KepSortKey } from '../utils/kep';
 import type { Kep } from '../types/kep';
 
 const PAGE_SIZE = 48;
 
 export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
-  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const { items: keps, loading, error } = data;
   const { bookmarks, toggleBookmark, isBookmarked } = useKepBookmarks();
@@ -36,21 +36,15 @@ export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const { sortKey, sortDir, handleSort } = useSort<KepSortKey>();
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.query) params.set('q', filters.query);
-    if (filters.sig.length) params.set('sig', filters.sig.join(','));
-    if (filters.status.length) params.set('status', filters.status.join(','));
-    if (filters.stage.length) params.set('stage', filters.stage.join(','));
-    if (filters.milestone) params.set('milestone', filters.milestone);
-    if (filters.stale) params.set('stale', 'true');
-    if (page > 1) params.set('page', String(page));
-    const qs = params.toString();
-    const newSearch = qs ? `?${qs}` : '';
-    if (typeof window !== 'undefined' && newSearch !== window.location.search) {
-      replace(newSearch || '/', { scroll: false });
-    }
-  }, [filters, page, replace]);
+  const urlParams = new URLSearchParams();
+  if (filters.query) urlParams.set('q', filters.query);
+  if (filters.sig.length) urlParams.set('sig', filters.sig.join(','));
+  if (filters.status.length) urlParams.set('status', filters.status.join(','));
+  if (filters.stage.length) urlParams.set('stage', filters.stage.join(','));
+  if (filters.milestone) urlParams.set('milestone', filters.milestone);
+  if (filters.stale) urlParams.set('stale', 'true');
+  if (page > 1) urlParams.set('page', String(page));
+  useUrlSync(urlParams, '/');
 
   const sigs = useMemo(
     () => [...new Set(keps.map((k) => k.sig))].sort(),
@@ -65,19 +59,14 @@ export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
     return [...new Set(ms)].sort((a, b) => compareVersions(b, a));
   }, [keps]);
 
+  const searchTexts = useMemo(() => new Map(keps.map((k) => [k.path, kepSearchText(k)])), [keps]);
+  // Filtering ~700 KEPs can lag behind fast typing; let the input stay responsive.
+  const query = useDeferredValue(filters.query);
+
   const filtered = useMemo(() => {
-    const q = filters.query.toLowerCase();
+    const q = query.toLowerCase();
     return keps.filter((kep) => {
-      if (
-        q &&
-        !kep.title?.toLowerCase().includes(q) &&
-        !kep.number.includes(q) &&
-        !kep.authors?.some((a) => a.toLowerCase().includes(q)) &&
-        !kep.slug.includes(q) &&
-        !kep.readme?.toLowerCase().includes(q)
-      ) {
-        return false;
-      }
+      if (q && !searchTexts.get(kep.path)?.includes(q)) return false;
       if (filters.sig.length && !filters.sig.includes(kep.sig)) return false;
       if (filters.status.length && !filters.status.includes(kep.status ?? '')) return false;
       if (filters.stage.length && !filters.stage.includes(kep.stage ?? '')) return false;
@@ -86,7 +75,7 @@ export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
       if (filters.bookmarked && !isBookmarked(kep.number)) return false;
       return true;
     });
-  }, [keps, filters, isBookmarked]);
+  }, [keps, searchTexts, query, filters, isBookmarked]);
 
   const sorted = useMemo(() => sortKeps(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
 

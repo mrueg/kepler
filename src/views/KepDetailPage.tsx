@@ -152,7 +152,7 @@ export function KepDetailPage({ number }: { number: string }) {
         <GitHubLink href={kep.githubUrl} />
       </div>
 
-      {readme && <MarkdownSection title="README" markdown={readme} />}
+      {readme && <MarkdownSection title="README" markdown={readme} githubDirUrl={kep.githubUrl} />}
     </div>
   );
 }
