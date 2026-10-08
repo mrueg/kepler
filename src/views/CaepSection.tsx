@@ -8,7 +8,7 @@ import { WhatsNew } from '../components/WhatsNew';
 import { TabBar, TabPanel } from '../components/Controls';
 import { useCaeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
-import { fetchRecentlyChangedCaeps } from '../api/clusterapi';
+import { loadRecentCaepChanges } from '../api/loaders';
 import type { Caep } from '../types/caep';
 
 // The stats tab pulls in Recharts; load it only when the tab is opened.
@@ -30,7 +30,7 @@ function isValidTab(value: string | null): value is Tab {
 
 // Separate component so the git-history requests only run while the tab is open.
 function CaepWhatsNew({ data }: { data: UseProposalsResult<Caep> }) {
-  const { changes, loading } = useRecentChanges(fetchRecentlyChangedCaeps);
+  const { changes, loading } = useRecentChanges(loadRecentCaepChanges);
   return <WhatsNew caeps={data.items} recentCaepChanges={changes} loading={data.loading || loading} />;
 }
 

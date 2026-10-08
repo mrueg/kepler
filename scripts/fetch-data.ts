@@ -11,7 +11,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KEP_BRANCH, KEP_REPO, crawlKeps, fetchKepPaths, fetchRecentlyChangedKeps } from '../src/api/github';
 import { GEP_BRANCH, GEP_REPO, crawlGeps, fetchGepPaths, fetchRecentlyChangedGeps } from '../src/api/gatewayapi';
-import { CAEP_BRANCH, CAEP_REPO, crawlCaeps, fetchCaepPaths } from '../src/api/clusterapi';
+import { CAEP_BRANCH, CAEP_REPO, crawlCaeps, fetchCaepPaths, fetchRecentlyChangedCaeps } from '../src/api/clusterapi';
 import { GITHUB_API_BASE } from '../src/api/shared';
 import { githubFetch } from '../src/utils/githubFetch';
 import { fetchReleaseTracking } from '../src/api/loaders';
@@ -111,6 +111,7 @@ async function main(): Promise<void> {
   for (const [name, fetchRecent, repo, branch] of [
     ['recent-keps', fetchRecentlyChangedKeps, KEP_REPO, KEP_BRANCH],
     ['recent-geps', fetchRecentlyChangedGeps, GEP_REPO, GEP_BRANCH],
+    ['recent-caeps', fetchRecentlyChangedCaeps, CAEP_REPO, CAEP_BRANCH],
   ] as const) {
     await dataset(name, async () => {
       const commit = await commitOf(repo, branch);
