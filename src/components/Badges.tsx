@@ -38,10 +38,15 @@ export function GepStatusBadge({ status }: { status?: GepStatus }) {
   return <Badge text={status} color={GEP_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR} />;
 }
 
+/** CAEPs share KEP status names, plus "experimental". Unknown values get the default colour. */
+export function caepStatusColor(status: string): string {
+  if (status === 'experimental') return '#06b6d4';
+  return KEP_STATUS_COLORS[status as KepStatus] ?? DEFAULT_STATUS_COLOR;
+}
+
 export function CaepStatusBadge({ status }: { status?: CaepStatus }) {
   if (!status) return null;
-  const color = status === 'experimental' ? '#06b6d4' : KEP_STATUS_COLORS[status];
-  return <Badge text={status} color={color ?? DEFAULT_STATUS_COLOR} capitalize />;
+  return <Badge text={status} color={caepStatusColor(status)} capitalize />;
 }
 
 export function ArchivedBadge() {

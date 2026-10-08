@@ -2,7 +2,7 @@ import type { Caep } from '../types/caep';
 import { githubFetch } from '../utils/githubFetch';
 import { firstHeading, parseFrontMatter } from '../utils/frontMatter';
 import { normalizeCaepMetadata } from '../utils/normalize';
-import { NotFoundError, fetchAllBatched, fetchTreePaths, getCached, setCache } from './shared';
+import { NotFoundError, fetchAllBatched, fetchRecentlyChanged, fetchTreePaths, getCached, setCache, type GitChange } from './shared';
 
 const REPO = 'kubernetes-sigs/cluster-api';
 const BRANCH = 'main';
@@ -10,6 +10,7 @@ export const CAEP_REPO = REPO;
 export const CAEP_BRANCH = BRANCH;
 export const CACHE_KEY_CAEPS = 'kepler_caeps_v1';
 export const CACHE_KEY_CAEP_TREE = 'kepler_caep_tree_v1';
+const CACHE_KEY_CAEP_GIT = 'kepler_caep_git_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_CAEPS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -120,4 +121,17 @@ export async function fetchAllCaeps(
   // Strip content before caching to avoid exceeding localStorage size limits
   setCache(CACHE_KEY_CAEPS, results.map(({ content: _content, ...caep }) => caep));
   return results;
+}
+
+// A proposal file in a commit; captures the CAEP id. Used for What's New.
+export const CAEP_FILE_PATTERN = /^docs\/proposals\/(?:archived\/)?(\d{8}-[^/]+)\.md$/;
+
+/**
+ * Returns the last `limit` CAEPs changed in git history, most-recent first.
+ * GitChange.number holds the CAEP id, since CAEPs have no numbers.
+ */
+export function fetchRecentlyChangedCaeps(limit = 10): Promise<GitChange[]> {
+  // Most cluster-api commits don't touch docs/proposals/, so path-filtered
+  // commits need the fewest requests.
+  return fetchRecentlyChanged(REPO, 'docs/proposals/', CAEP_FILE_PATTERN, CACHE_KEY_CAEP_GIT, 'commits', limit);
 }
