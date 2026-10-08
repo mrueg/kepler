@@ -21,6 +21,10 @@
   --toggle-border: rgba(255,255,255,.25);
   --toggle-hover-bg: rgba(255,255,255,.1);
   --toggle-hover-border: rgba(255,255,255,.5);
+  /* Status badge text is its colour mixed toward this, so every badge colour
+     meets WCAG AA (>= 4.5:1) on its tinted background. */
+  --badge-text-mix: 55%;
+  --badge-text-toward: #000;
 }
 
 [data-theme="dark"] {
@@ -36,6 +40,8 @@
   --error-text: #f8b4b4;
   --error-btn-hover: #3d2020;
   --gh-link-hover-bg: #1c2d44;
+  --badge-text-mix: 65%;
+  --badge-text-toward: #fff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,6 +58,8 @@
     --error-text: #f8b4b4;
     --error-btn-hover: #3d2020;
     --gh-link-hover-bg: #1c2d44;
+    --badge-text-mix: 65%;
+    --badge-text-toward: #fff;
   }
 }
 
@@ -902,6 +910,18 @@ a:hover { text-decoration: underline; }
   padding: 60px 20px;
   color: var(--text-secondary);
 }
+.error-page-title {
+  font-size: 1.4rem;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.error-page-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16px;
+}
 .spinner {
   width: 40px; height: 40px;
   border: 3px solid var(--border);
@@ -1136,17 +1156,18 @@ a:hover { text-decoration: underline; }
 .kep-table-td-bookmark { text-align: center; }
 
 /* GEP status badge */
-.gep-status-badge {
+.status-badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  background: color-mix(in srgb, var(--gep-badge-color) 15%, transparent);
-  color: var(--gep-badge-color);
-  border: 1px solid color-mix(in srgb, var(--gep-badge-color) 30%, transparent);
+  background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+  color: color-mix(in srgb, var(--badge-color) var(--badge-text-mix), var(--badge-text-toward));
+  border: 1px solid color-mix(in srgb, var(--badge-color) 30%, transparent);
 }
+.status-badge--capitalize { text-transform: capitalize; }
 
 /* GEP relationship description */
 .gep-rel-desc {

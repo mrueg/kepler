@@ -7,8 +7,9 @@ import { useSort } from '../hooks/useSort';
 import { LoadStatus } from '../components/LoadingBar';
 import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
-import { ViewToggle, type ViewMode } from '../components/Controls';
-import { sortKeps, normalizeVersion, compareVersions, type KepSortKey } from '../utils/kep';
+import { ViewToggle } from '../components/Controls';
+import { readListDisplayState, writeListDisplayState, type ViewMode } from '../utils/listParams';
+import { sortKeps, normalizeVersion, compareVersions, KEP_SORT_KEYS, type KepSortKey } from '../utils/kep';
 import type { Kep } from '../types/kep';
 
 interface ReleaseGroup {
@@ -48,8 +49,9 @@ export function ReleasePage({ data }: { data: UseProposalsResult<Kep> }) {
   const [manualVersion, setManualVersion] = useState<string>(
     searchParams.get('v') ?? '',
   );
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>();
+  const [initialDisplay] = useState(() => readListDisplayState(searchParams, KEP_SORT_KEYS));
+  const [viewMode, setViewMode] = useState<ViewMode>(initialDisplay.viewMode);
+  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>(initialDisplay.sortKey, initialDisplay.sortDir);
 
   // Derive the effective version: use manual selection if set, otherwise default to latest
   const selectedVersion =
@@ -60,12 +62,13 @@ export function ReleasePage({ data }: { data: UseProposalsResult<Kep> }) {
       const params = new URLSearchParams(searchParamsRef.current.toString());
       params.set('tab', 'release');
       params.set('v', selectedVersion);
+      writeListDisplayState(params, { viewMode, sortKey, sortDir });
       const newSearch = `?${params.toString()}`;
       if (typeof window !== 'undefined' && newSearch !== window.location.search) {
         replace(newSearch, { scroll: false });
       }
     }
-  }, [selectedVersion, replace]);
+  }, [selectedVersion, viewMode, sortKey, sortDir, replace]);
 
   const releaseGroups = useMemo((): ReleaseGroup[] => {
     if (!selectedVersion) return [];

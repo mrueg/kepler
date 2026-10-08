@@ -69,7 +69,8 @@ export function kepDisplayTitle(kep: Kep): string {
   return kep.title || kep.slug.replace(/-/g, ' ');
 }
 
-export type KepSortKey = 'title' | 'sig' | 'status' | 'stage' | 'last-updated';
+export const KEP_SORT_KEYS = ['title', 'sig', 'status', 'stage', 'last-updated'] as const;
+export type KepSortKey = (typeof KEP_SORT_KEYS)[number];
 export type SortDir = 'asc' | 'desc';
 
 function kepSortValue(kep: Kep, key: KepSortKey): string {

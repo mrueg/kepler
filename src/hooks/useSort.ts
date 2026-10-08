@@ -8,8 +8,8 @@ export interface UseSortResult<K extends string> {
 }
 
 /** Column sort state: selecting the active column flips direction, a new column sorts ascending. */
-export function useSort<K extends string>(): UseSortResult<K> {
-  const [sort, setSort] = useState<{ key: K | undefined; dir: SortDir }>({ key: undefined, dir: 'asc' });
+export function useSort<K extends string>(initialKey?: K, initialDir: SortDir = 'asc'): UseSortResult<K> {
+  const [sort, setSort] = useState<{ key: K | undefined; dir: SortDir }>({ key: initialKey, dir: initialDir });
 
   const handleSort = useCallback((key: K) => {
     setSort((prev) =>

@@ -1,6 +1,6 @@
+import { useRef } from 'react';
 import type { SortDir } from '../utils/kep';
-
-export type ViewMode = 'grid' | 'table';
+import type { ViewMode } from '../utils/listParams';
 
 export function ViewToggle({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
   return (
@@ -35,11 +35,18 @@ export function Pagination({
   onChange: (page: number) => void;
 }) {
   if (totalPages <= 1) return null;
+
+  function goTo(next: number) {
+    onChange(next);
+    // The controls sit below the list; start the new page from the top.
+    window.scrollTo({ top: 0 });
+  }
+
   return (
     <div className="pagination">
       <button
         className="page-btn"
-        onClick={() => onChange(Math.max(1, page - 1))}
+        onClick={() => goTo(Math.max(1, page - 1))}
         disabled={page === 1}
       >
         ← Previous
@@ -49,7 +56,7 @@ export function Pagination({
       </span>
       <button
         className="page-btn"
-        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        onClick={() => goTo(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
       >
         Next →
@@ -96,29 +103,78 @@ export function SortableTh<K extends string>({
   );
 }
 
+/**
+ * Accessible tab list: ←/→ move to the previous/next tab and Home/End to the
+ * first/last, activating it (automatic activation). Only the active tab is in
+ * the Tab order. Pair with <TabPanel> using the same `idPrefix`.
+ */
 export function TabBar<T extends string>({
   tabs,
   active,
   onChange,
+  idPrefix,
+  label,
 }: {
   tabs: { id: T; label: string }[];
   active: T;
   onChange: (tab: T) => void;
+  idPrefix: string;
+  label: string;
 }) {
+  const tabRefs = useRef(new Map<T, HTMLButtonElement>());
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    const index = tabs.findIndex((t) => t.id === active);
+    let next: number;
+    switch (e.key) {
+      case 'ArrowRight': next = (index + 1) % tabs.length; break;
+      case 'ArrowLeft': next = (index - 1 + tabs.length) % tabs.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = tabs.length - 1; break;
+      default: return;
+    }
+    e.preventDefault();
+    const id = tabs[next].id;
+    onChange(id);
+    tabRefs.current.get(id)?.focus();
+  }
+
   return (
-    <div className="stats-tabs" role="tablist">
-      {tabs.map(({ id, label }) => (
+    <div className="stats-tabs" role="tablist" aria-label={label} onKeyDown={handleKeyDown}>
+      {tabs.map(({ id, label: tabLabel }) => (
         <button
           key={id}
+          ref={(el) => {
+            if (el) tabRefs.current.set(id, el);
+            else tabRefs.current.delete(id);
+          }}
+          id={`${idPrefix}-tab-${id}`}
           className={`stats-tab${active === id ? ' stats-tab--active' : ''}`}
           onClick={() => onChange(id)}
           role="tab"
           aria-selected={active === id}
+          aria-controls={`${idPrefix}-panel`}
           tabIndex={active === id ? 0 : -1}
         >
-          {label}
+          {tabLabel}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function TabPanel({
+  idPrefix,
+  active,
+  children,
+}: {
+  idPrefix: string;
+  active: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div role="tabpanel" id={`${idPrefix}-panel`} aria-labelledby={`${idPrefix}-tab-${active}`}>
+      {children}
     </div>
   );
 }

@@ -11,7 +11,8 @@ import { gepSearchText } from '../utils/gep';
 import { LoadStatus } from '../components/LoadingBar';
 import { CheckboxDropdown } from '../components/SearchAndFilter';
 import { GepStatusBadge, BookmarkButton } from '../components/Badges';
-import { ViewToggle, Pagination, SortableTh, type ViewMode } from '../components/Controls';
+import { ViewToggle, Pagination, SortableTh } from '../components/Controls';
+import { readListDisplayState, writeListDisplayState, type ViewMode } from '../utils/listParams';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import type { Gep } from '../types/gep';
 import type { SortDir } from '../utils/kep';
@@ -53,7 +54,8 @@ function GepCard({
   );
 }
 
-type GepSortKey = 'number' | 'name' | 'status';
+const GEP_SORT_KEYS = ['number', 'name', 'status'] as const;
+type GepSortKey = (typeof GEP_SORT_KEYS)[number];
 
 function GepTable({
   geps,
@@ -132,14 +134,15 @@ export function GepListPage({ data }: { data: UseProposalsResult<Gep> }) {
   const [filters, setFilters] = useState<GepFilters>({
     query: searchParams.get('q') ?? '',
     status: searchParams.get('status')?.split(',').filter(Boolean) ?? [],
-    bookmarked: false,
+    bookmarked: searchParams.get('bookmarked') === 'true',
   });
   const [page, setPage] = useState(() => {
     const p = parseInt(searchParams.get('page') ?? '1', 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const { sortKey, sortDir, handleSort } = useSort<GepSortKey>();
+  const [initialDisplay] = useState(() => readListDisplayState(searchParams, GEP_SORT_KEYS));
+  const [viewMode, setViewMode] = useState<ViewMode>(initialDisplay.viewMode);
+  const { sortKey, sortDir, handleSort } = useSort<GepSortKey>(initialDisplay.sortKey, initialDisplay.sortDir);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const handleSlash = useCallback((e: KeyboardEvent) => {
@@ -154,6 +157,8 @@ export function GepListPage({ data }: { data: UseProposalsResult<Gep> }) {
   const urlParams = new URLSearchParams();
   if (filters.query) urlParams.set('q', filters.query);
   if (filters.status.length) urlParams.set('status', filters.status.join(','));
+  if (filters.bookmarked) urlParams.set('bookmarked', 'true');
+  writeListDisplayState(urlParams, { viewMode, sortKey, sortDir });
   if (page > 1) urlParams.set('page', String(page));
   useUrlSync(urlParams, '/gep');
 
