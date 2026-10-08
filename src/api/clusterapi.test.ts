@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CACHE_KEY_CAEPS, caepIdFromReference, fetchAllCaeps, findCaepPath, parseCaep, parseCaepPath } from './clusterapi';
+import {
+  CACHE_KEY_CAEPS,
+  caepIdFromReference,
+  fetchAllCaeps,
+  fetchRecentlyChangedCaeps,
+  findCaepPath,
+  parseCaep,
+  parseCaepPath,
+} from './clusterapi';
 import { readCache } from './shared';
 import { json, stubFetch } from '../test/fetch';
 import type { Caep } from '../types/caep';
@@ -109,5 +117,33 @@ describe('fetchAllCaeps / findCaepPath', () => {
     stubRepo();
     await expect(findCaepPath('20210101-gone')).resolves.toBe('docs/proposals/archived/20210101-gone.md');
     await expect(findCaepPath('20990101-nope')).resolves.toBeNull();
+  });
+});
+
+describe('fetchRecentlyChangedCaeps', () => {
+  it('walks path-filtered commits and reports CAEP ids, including archived ones', async () => {
+    const fetchMock = stubFetch((url) => {
+      if (url.includes('/commits?path=docs/proposals/')) {
+        return json([
+          { sha: 'b', commit: { committer: { date: '2026-10-02T00:00:00Z' } } },
+          { sha: 'a', commit: { committer: { date: '2026-09-01T00:00:00Z' } } },
+        ]);
+      }
+      if (url.endsWith('/commits/b')) {
+        return json({ files: [{ filename: 'docs/proposals/20240916-improve-status.md' }, { filename: 'docs/proposals/images/x.png' }] });
+      }
+      if (url.endsWith('/commits/a')) {
+        return json({ files: [{ filename: 'docs/proposals/archived/20210222-kubelet-authentication.md' }, { filename: 'docs/proposals/YYYYMMDD-template.md' }] });
+      }
+      return undefined;
+    });
+
+    const changes = await fetchRecentlyChangedCaeps();
+
+    expect(changes.map((c) => [c.number, c.date.toISOString().slice(0, 10)])).toEqual([
+      ['20240916-improve-status', '2026-10-02'],
+      ['20210222-kubelet-authentication', '2026-09-01'],
+    ]);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/repos/kubernetes-sigs/cluster-api/commits?path=docs/proposals/');
   });
 });

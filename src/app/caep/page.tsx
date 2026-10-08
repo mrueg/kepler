@@ -3,14 +3,8 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CaepListPage } from '../../views/CaepListPage';
+import { CaepSection } from '../../views/CaepSection';
 import { CaepDetailPage } from '../../views/CaepDetailPage';
-import { useCaeps } from '../../hooks/useProposals';
-
-function CaepList() {
-  const data = useCaeps();
-  return <CaepListPage data={data} />;
-}
 
 function CaepPageContent() {
   const searchParams = useSearchParams();
@@ -32,7 +26,7 @@ function CaepPageContent() {
     return <CaepDetailPage key={id} id={id} />;
   }
 
-  return <CaepList />;
+  return <CaepSection />;
 }
 
 export default function CaepPage() {

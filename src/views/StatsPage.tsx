@@ -21,6 +21,8 @@ import type { UseProposalsResult } from '../hooks/useProposals';
 import { LoadStatus } from '../components/LoadingBar';
 import type { Kep, KepStatus } from '../types/kep';
 import type { Gep, GepStatus } from '../types/gep';
+import type { Caep } from '../types/caep';
+import { caepStatusColor } from '../components/Badges';
 import { KEP_STATUS_COLORS, normalizeVersion, compareVersions } from '../utils/kep';
 import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
@@ -214,21 +216,46 @@ function RankingChart({ title, data }: { title: string; data: { key: string; cou
   );
 }
 
+/** Counts items per year (from a YYYY… date string), oldest first. */
+function perYear<T>(items: T[], dateOf: (item: T) => string | undefined): { year: string; count: number }[] {
+  return countBy(items, (item) => {
+    const year = dateOf(item)?.slice(0, 4);
+    return [year && /^\d{4}$/.test(year) ? year : undefined];
+  })
+    .map(({ key, count }) => ({ year: key, count }))
+    .sort((a, b) => a.year.localeCompare(b.year));
+}
+
+function PerYearChart({ title, data }: { title: string; data: { year: string; count: number }[] }) {
+  return (
+    <section className="stats-card stats-card--wide">
+      <h2 className="stats-card-title">{title}</h2>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="year" tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Line
+            type="monotone"
+            dataKey="count"
+            stroke="var(--accent)"
+            strokeWidth={2}
+            dot={{ fill: 'var(--accent)', r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
+
 export function KepStats({ data }: { data: UseProposalsResult<Kep> }) {
   const { items: keps, loading, error } = data;
 
   const sigData = useMemo(() => countBy(keps, (k) => [k.sig]).slice(0, TOP_SIGS), [keps]);
 
-  const yearData = useMemo(
-    () =>
-      countBy(keps, (k) => {
-        const year = k['creation-date']?.slice(0, 4);
-        return [year && /^\d{4}$/.test(year) ? year : undefined];
-      })
-        .map(({ key, count }) => ({ year: key, count }))
-        .sort((a, b) => a.year.localeCompare(b.year)),
-    [keps],
-  );
+  const yearData = useMemo(() => perYear(keps, (k) => k['creation-date']), [keps]);
 
   const statusData = useMemo(() => countBy(keps, (k) => [k.status ?? 'unknown']), [keps]);
 
@@ -294,31 +321,7 @@ export function KepStats({ data }: { data: UseProposalsResult<Kep> }) {
         <div className="stats-grid">
           <RankingChart title={`KEP Distribution by SIG (Top ${TOP_SIGS})`} data={sigData} />
 
-          <section className="stats-card stats-card--wide">
-            <h2 className="stats-card-title">KEPs Created per Year</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart
-                data={yearData}
-                margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="year"
-                  tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
-                />
-                <YAxis tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="var(--accent)"
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--accent)', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </section>
+          <PerYearChart title="KEPs Created per Year" data={yearData} />
 
           <StatusCharts
             statusData={statusData}
@@ -432,6 +435,43 @@ export function GepStats({ data }: { data: UseProposalsResult<Gep> }) {
 
           {authorData.length > 0 && (
             <RankingChart title={`Top Authors (Top ${TOP_AUTHORS})`} data={authorData} />
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function CaepStats({ data }: { data: UseProposalsResult<Caep> }) {
+  const { items: caeps, loading, error } = data;
+
+  const yearData = useMemo(() => perYear(caeps, (c) => c.date), [caeps]);
+  const statusData = useMemo(() => countBy(caeps, (c) => [c.status ?? 'unknown']), [caeps]);
+  const authorData = useMemo(() => countBy(caeps, (c) => c.authors ?? []).slice(0, TOP_AUTHORS), [caeps]);
+  const reviewerData = useMemo(() => countBy(caeps, (c) => c.reviewers ?? []).slice(0, TOP_AUTHORS), [caeps]);
+  const archived = caeps.filter((c) => c.archived).length;
+
+  return (
+    <>
+      <p className="stats-subtitle">
+        A high-level view of {caeps.length} Cluster API Enhancement Proposals
+        {archived > 0 && ` (${archived} archived)`}
+      </p>
+
+      <LoadStatus {...data} noun="CAEPs" />
+
+      {!loading && !error && (
+        <div className="stats-grid">
+          <PerYearChart title="CAEPs Proposed per Year" data={yearData} />
+
+          <StatusCharts statusData={statusData} total={caeps.length} colorFor={caepStatusColor} />
+
+          {authorData.length > 0 && (
+            <RankingChart title={`Top Authors (Top ${TOP_AUTHORS})`} data={authorData} />
+          )}
+
+          {reviewerData.length > 0 && (
+            <RankingChart title={`Top Reviewers (Top ${TOP_AUTHORS})`} data={reviewerData} />
           )}
         </div>
       )}

@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import type { Kep } from '../types/kep';
 import type { Gep } from '../types/gep';
+import type { Caep } from '../types/caep';
 import type { GitChange } from '../api/shared';
-import { StatusBadge, GepStatusBadge } from './Badges';
+import { StatusBadge, GepStatusBadge, CaepStatusBadge } from './Badges';
+import { caepHref } from '../api/clusterapi';
 import { daysSince, kepDisplayTitle } from '../utils/kep';
 
 const MAX_ITEMS = 10;
@@ -25,10 +27,21 @@ interface WhatsNewProps {
   geps?: Gep[];
   recentKepChanges?: GitChange[];
   recentGepChanges?: GitChange[];
+  caeps?: Caep[];
+  /** GitChange.number is the CAEP id. */
+  recentCaepChanges?: GitChange[];
   loading?: boolean;
 }
 
-export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChanges, loading = false }: WhatsNewProps) {
+export function WhatsNew({
+  keps = [],
+  geps = [],
+  caeps = [],
+  recentKepChanges,
+  recentGepChanges,
+  recentCaepChanges,
+  loading = false,
+}: WhatsNewProps) {
   const kepByNumber = new Map(keps.map((k) => [k.number, k]));
   const gepByNumber = new Map(geps.map((g) => [String(g.number), g]));
 
@@ -42,10 +55,17 @@ export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChan
     .map(({ number, date }) => ({ gep: gepByNumber.get(number), date }))
     .filter((item): item is { gep: Gep; date: Date } => item.gep !== undefined);
 
+  const caepById = new Map(caeps.map((c) => [c.id, c]));
+  const recentCaeps = (recentCaepChanges ?? [])
+    .slice(0, MAX_ITEMS)
+    .map(({ number: id, date }) => ({ caep: caepById.get(id), date }))
+    .filter((item): item is { caep: Caep; date: Date } => item.caep !== undefined);
+
   const hasKeps = recentKeps.length > 0;
   const hasGeps = recentGeps.length > 0;
+  const hasCaeps = recentCaeps.length > 0;
 
-  if (!loading && !hasKeps && !hasGeps) return null;
+  if (!loading && !hasKeps && !hasGeps && !hasCaeps) return null;
 
   return (
     <aside className="whats-new">
@@ -87,6 +107,26 @@ export function WhatsNew({ keps = [], geps = [], recentKepChanges, recentGepChan
                 </Link>
                 <div className="whats-new-meta">
                   <GepStatusBadge status={gep.status} />
+                  <RelativeTime date={date} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!loading && hasCaeps && (
+        <section className="whats-new-section">
+          <div className="whats-new-section-label">Recently changed CAEPs</div>
+          <ul className="whats-new-list">
+            {recentCaeps.map(({ caep, date }) => (
+              <li key={caep.path} className="whats-new-item">
+                <Link href={caepHref(caep.id)} className="whats-new-link">
+                  <span className="whats-new-number">CAEP · {caep.date}</span>
+                  <span className="whats-new-item-title">{caep.title}</span>
+                </Link>
+                <div className="whats-new-meta">
+                  <CaepStatusBadge status={caep.status} />
                   <RelativeTime date={date} />
                 </div>
               </li>
