@@ -21,7 +21,7 @@ import {
 
 const REPO = 'kubernetes/enhancements';
 const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/master`;
-export const CACHE_KEY_KEPS = 'kepler_keps_v5';
+export const CACHE_KEY_KEPS = 'kepler_keps_v6';
 export const CACHE_KEY_TREE = 'kepler_tree_v2';
 const CACHE_KEY_KEP_GIT = 'kepler_kep_git_v2';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour

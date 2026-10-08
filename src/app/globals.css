@@ -1519,3 +1519,23 @@ a:hover { text-decoration: underline; }
   color: var(--text-secondary);
   padding: 8px 0;
 }
+
+/* Feature gates */
+.feature-gate-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+.feature-gate-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.feature-gate-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.feature-gate-components { font-size: 0.8rem; color: var(--text-secondary); }
+.feature-gate-disable { margin-top: 8px; font-size: 0.85rem; color: var(--text-secondary); }
+.feature-gate-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}

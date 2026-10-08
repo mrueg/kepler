@@ -56,6 +56,28 @@ milestone: v1.20
     expect(meta.milestone).toBeUndefined();
   });
 
+  it('parses feature gates and disable-supported', () => {
+    const meta = normalizeKepMetadata(load(`
+feature-gates:
+  - name: SidecarContainers
+    components:
+      - kubelet
+      - kube-apiserver
+  - name: 42
+  - JustAName
+  - components: [kubelet]
+disable-supported: false
+`));
+    expect(meta['feature-gates']).toEqual([
+      { name: 'SidecarContainers', components: ['kubelet', 'kube-apiserver'] },
+      { name: '42' },
+      { name: 'JustAName' },
+    ]);
+    expect(meta['disable-supported']).toBe(false);
+    expect(normalizeKepMetadata(load('disable-supported: yes'))['disable-supported']).toBe(true);
+    expect(normalizeKepMetadata(load('disable-supported: maybe'))['disable-supported']).toBeUndefined();
+  });
+
   it('returns empty metadata for non-object YAML', () => {
     expect(normalizeKepMetadata(load('just a string'))).toEqual({});
     expect(normalizeKepMetadata(null)).toEqual({});

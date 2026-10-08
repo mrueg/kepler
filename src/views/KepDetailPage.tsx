@@ -8,6 +8,7 @@ import type { Kep } from '../types/kep';
 import { StatusBadge, StageBadge, StaleBadge, BookmarkButton } from '../components/Badges';
 import { MetaItem, DetailSection, PeopleSection, PRList, GitHubLink, MarkdownSection } from '../components/Detail';
 import { MilestoneTimeline } from '../components/MilestoneTimeline';
+import { FeatureGateList } from '../components/FeatureGateList';
 import { isStale, formatSig } from '../utils/kep';
 import { useKepBookmarks } from '../hooks/useBookmarks';
 import { useDetailShortcuts } from '../hooks/useKeyboardShortcut';
@@ -130,6 +131,12 @@ export function KepDetailPage({ number }: { number: string }) {
         {kep.milestone && Object.keys(kep.milestone).length > 0 && (
           <DetailSection title="Milestones">
             <MilestoneTimeline milestone={kep.milestone} stage={kep.stage} />
+          </DetailSection>
+        )}
+
+        {kep['feature-gates'] && (
+          <DetailSection title="Feature Gates">
+            <FeatureGateList gates={kep['feature-gates']} disableSupported={kep['disable-supported']} />
           </DetailSection>
         )}
 

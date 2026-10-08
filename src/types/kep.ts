@@ -15,6 +15,12 @@ export interface KepMilestone {
   stable?: string;
 }
 
+export interface KepFeatureGate {
+  name: string;
+  /** Components the gate must be set on, e.g. kubelet, kube-apiserver. */
+  components?: string[];
+}
+
 export interface KepMetadata {
   title?: string;
   status?: KepStatus;
@@ -34,6 +40,9 @@ export interface KepMetadata {
   'latest-milestone'?: string;
   'kep-number'?: number;
   'prr-approvers'?: string[];
+  'feature-gates'?: KepFeatureGate[];
+  /** Whether the feature can be disabled again once enabled. */
+  'disable-supported'?: boolean;
 }
 
 export interface Kep extends KepMetadata {

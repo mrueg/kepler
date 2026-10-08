@@ -8,6 +8,7 @@ import {
   isStale,
   kepDisplayTitle,
   kepSearchText,
+  listFeatureGates,
   normalizeVersion,
   sortKeps,
 } from './kep';
@@ -113,5 +114,22 @@ describe('kepSearchText', () => {
     for (const q of ['sidecar', '1234', 'foo-bar', '@someone', 'pod lifecycle']) {
       expect(text).toContain(q);
     }
+  });
+});
+
+describe('feature gates', () => {
+  const sidecar = kep({ number: '753', 'feature-gates': [{ name: 'SidecarContainers', components: ['kubelet'] }] });
+  const other = kep({ number: '12', 'feature-gates': [{ name: 'Alpha' }, { name: 'Zeta' }] });
+
+  it('lists every gate sorted by name, with its KEP', () => {
+    expect(listFeatureGates([sidecar, kep(), other]).map((g) => [g.name, g.kep.number, g.components])).toEqual([
+      ['Alpha', '12', []],
+      ['SidecarContainers', '753', ['kubelet']],
+      ['Zeta', '12', []],
+    ]);
+  });
+
+  it('makes KEPs findable by feature gate name', () => {
+    expect(kepSearchText(sidecar)).toContain('sidecarcontainers');
   });
 });
