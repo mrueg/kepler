@@ -3,7 +3,7 @@ import type { GepStatus } from '../types/gep';
 import { KEP_STATUS_COLORS, KEP_STAGE_COLORS } from '../utils/kep';
 import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
-function Badge({ text, color, capitalize = false }: { text: string; color: string; capitalize?: boolean }) {
+export function Badge({ text, color, capitalize = false }: { text: string; color: string; capitalize?: boolean }) {
   return (
     <span
       className={`status-badge${capitalize ? ' status-badge--capitalize' : ''}`}
