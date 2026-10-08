@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { KepListPage } from './KepListPage';
 import { ReleasePage } from './ReleasePage';
+import { ReleaseTrackingPage } from './ReleaseTrackingPage';
 import { FeatureGatesPage } from './FeatureGatesPage';
 import { WhatsNew } from '../components/WhatsNew';
 import { TabBar, TabPanel } from '../components/Controls';
@@ -18,11 +19,12 @@ const KepStats = dynamic(() => import('./StatsPage').then((m) => m.KepStats), {
   loading: () => <div className="detail-loading"><div className="spinner" /></div>,
 });
 
-type Tab = 'list' | 'release' | 'gates' | 'whats-new' | 'stats';
+type Tab = 'list' | 'release' | 'tracking' | 'gates' | 'whats-new' | 'stats';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'list', label: 'KEPs' },
   { id: 'release', label: 'Release Timeline' },
+  { id: 'tracking', label: 'Release Tracking' },
   { id: 'gates', label: 'Feature Gates' },
   { id: 'whats-new', label: "What's New" },
   { id: 'stats', label: 'Stats' },
@@ -74,6 +76,7 @@ export function KepSection() {
       <TabPanel idPrefix="kep" active={activeTab}>
         {activeTab === 'list' && <KepListPage data={data} />}
         {activeTab === 'release' && <ReleasePage data={data} />}
+        {activeTab === 'tracking' && <ReleaseTrackingPage data={data} />}
         {activeTab === 'gates' && <FeatureGatesPage data={data} />}
         {activeTab === 'whats-new' && <KepWhatsNew data={data} />}
         {activeTab === 'stats' && <KepStats data={data} />}
