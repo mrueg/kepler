@@ -8,7 +8,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Kepler – Kubernetes Enhancement Proposal Explorer',
-  description: 'Explore Kubernetes Enhancement Proposals (KEPs) and Gateway API Enhancement Proposals (GEPs)',
+  description: 'Explore Kubernetes Enhancement Proposals (KEPs), Gateway API Enhancement Proposals (GEPs) and Cluster API Enhancement Proposals (CAEPs)',
 };
 
 export default function RootLayout({
@@ -40,6 +40,9 @@ export default function RootLayout({
               <Link href="/gep" className="header-nav-link">
                 GEPs
               </Link>
+              <Link href="/caep" className="header-nav-link">
+                CAEPs
+              </Link>
             </nav>
             <QuickJump />
             <ThemeToggle />
@@ -63,6 +66,15 @@ export default function RootLayout({
                 rel="noopener noreferrer"
               >
                 kubernetes-sigs/gateway-api
+              </a>
+              {' · '}
+              CAEP data from{' '}
+              <a
+                href="https://github.com/kubernetes-sigs/cluster-api"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                kubernetes-sigs/cluster-api
               </a>
               {' · '}
               Code available at{' '}

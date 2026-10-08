@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 const KEP_STORAGE_KEY = 'kepler_bookmarks_v1';
 const GEP_STORAGE_KEY = 'kepler_gep_bookmarks_v1';
+const CAEP_STORAGE_KEY = 'kepler_caep_bookmarks_v1';
 
 export interface UseBookmarksResult {
   bookmarks: Set<string>;
@@ -65,4 +66,8 @@ export function useKepBookmarks(): UseBookmarksResult {
 
 export function useGepBookmarks(): UseBookmarksResult {
   return useBookmarks(GEP_STORAGE_KEY);
+}
+
+export function useCaepBookmarks(): UseBookmarksResult {
+  return useBookmarks(CAEP_STORAGE_KEY);
 }

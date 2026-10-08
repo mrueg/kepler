@@ -1,4 +1,5 @@
 import type { KepFeatureGate, KepMetadata, KepMilestone, KepStage, KepStatus } from '../types/kep';
+import type { CaepMetadata, CaepStatus } from '../types/caep';
 import type { GepMetadata, GepRelationship, GepRelationships, GepStatus } from '../types/gep';
 
 // Proposal metadata is hand-written YAML, so any field can have an unexpected
@@ -130,5 +131,36 @@ export function normalizeGepMetadata(raw: unknown): GepMetadata | null {
     relationships: Object.keys(relationships).length > 0 ? relationships : undefined,
     references: asStringList(raw.references),
     changelog: asStringList(raw.changelog),
+  });
+}
+
+const CAEP_STATUSES = new Set<CaepStatus>([
+  'provisional', 'experimental', 'implementable', 'implemented', 'deferred', 'rejected', 'withdrawn', 'replaced',
+]);
+
+/** Like asStringList, but drops "N/A", which some proposals use for "none". */
+function asReferenceList(value: unknown): string[] | undefined {
+  const refs = asStringList(value)?.filter((s) => s.toUpperCase() !== 'N/A');
+  return refs && refs.length > 0 ? refs : undefined;
+}
+
+/** GitHub handles, without stray (typographic) quotes around them. */
+function asHandleList(value: unknown): string[] | undefined {
+  return asStringList(value)?.map((h) => h.replace(/^["'“”‘’]+|["'“”‘’]+$/g, ''));
+}
+
+export function normalizeCaepMetadata(raw: unknown): CaepMetadata {
+  const r = isRecord(raw) ? raw : {};
+  const status = asString(r.status)?.toLowerCase();
+  return withoutUndefined({
+    title: asString(r.title),
+    status: status && CAEP_STATUSES.has(status as CaepStatus) ? (status as CaepStatus) : undefined,
+    authors: asHandleList(r.authors),
+    reviewers: asHandleList(r.reviewers),
+    'creation-date': asString(r['creation-date']),
+    'last-updated': asString(r['last-updated']),
+    'see-also': asReferenceList(r['see-also']),
+    replaces: asReferenceList(r.replaces),
+    'superseded-by': asReferenceList(r['superseded-by']),
   });
 }
