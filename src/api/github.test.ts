@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { findKepPath, parseKepPath, titleMentionsKep } from './github';
+import { fetchEnhancementPRs, findKepPath, parseKepPath, titleMentionsKep } from './github';
 import { json, stubFetch } from '../test/fetch';
 
 afterEach(() => {
@@ -48,5 +48,36 @@ describe('titleMentionsKep', () => {
   it('does not match longer numbers containing it', () => {
     expect(titleMentionsKep('KEP-1234: graduate to beta', '12')).toBe(false);
     expect(titleMentionsKep('KEP-312: graduate to beta', '12')).toBe(false);
+  });
+});
+
+describe('fetchEnhancementPRs', () => {
+  function stubPRs(reviews: () => Response) {
+    return stubFetch((url) => {
+      if (url.includes('/search/issues')) {
+        return json({ items: [{ number: 5, title: 'KEP-753: beta', state: 'open', html_url: 'u', user: { login: 'a' } }] });
+      }
+      if (url.endsWith('/pulls/5/reviews')) return reviews();
+      if (url.endsWith('/pulls/5')) return json({ head: { sha: 'abc' } });
+      if (url.endsWith('/commits/abc/check-runs')) return json({ check_runs: [] });
+      return undefined;
+    });
+  }
+
+  it('caches complete results', async () => {
+    const fetchMock = stubPRs(() => json([]));
+    await fetchEnhancementPRs('753');
+    const calls = fetchMock.mock.calls.length;
+    await expect(fetchEnhancementPRs('753')).resolves.toHaveLength(1);
+    expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
+  it('does not cache results with a failed status request', async () => {
+    const fetchMock = stubPRs(() => new Response('rate limited', { status: 403 }));
+    const [first] = await fetchEnhancementPRs('753');
+    expect(first.reviewStatus).toBe('none');
+    const calls = fetchMock.mock.calls.length;
+    await fetchEnhancementPRs('753');
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(calls);
   });
 });

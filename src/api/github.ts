@@ -13,15 +13,17 @@ import {
   fetchReviewStatus,
   fetchCIStatus,
   normalizePRState,
+  cachedPRStatus,
   type GitChange,
   type PRInfo,
+  type PRStatusResult,
 } from './shared';
 
 const REPO = 'kubernetes/enhancements';
 const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/master`;
 export const CACHE_KEY_KEPS = 'kepler_keps_v5';
 export const CACHE_KEY_TREE = 'kepler_tree_v2';
-const CACHE_KEY_KEP_GIT = 'kepler_kep_git_v1';
+const CACHE_KEY_KEP_GIT = 'kepler_kep_git_v2';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
 const CACHE_TTL_KEPS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -80,20 +82,24 @@ export function titleMentionsKep(title: string, kepNumber: string): boolean {
   return new RegExp(`(?:^|\\D)${kepNumber}(?:\\D|$)`).test(title);
 }
 
-export async function fetchEnhancementPRs(
-  kepNumber: string,
-): Promise<PRInfo[]> {
+export function fetchEnhancementPRs(kepNumber: string): Promise<PRInfo[]> {
+  return cachedPRStatus(`${REPO}#${kepNumber}`, () => loadEnhancementPRs(kepNumber));
+}
+
+/** Returns null if the PR search failed; `complete` is false if a status request failed. */
+async function loadEnhancementPRs(kepNumber: string): Promise<PRStatusResult | null> {
   try {
     const searchUrl = `${GITHUB_API_BASE}/search/issues?q=repo:${REPO}+is:pr+${encodeURIComponent(kepNumber)}&per_page=5&sort=updated&order=desc`;
     const searchResp = await githubFetch(searchUrl);
-    if (!searchResp.ok) return [];
+    if (!searchResp.ok) return null;
     const searchData = (await searchResp.json()) as {
       items: { number: number; title: string; state: string; html_url: string; pull_request?: { merged_at: string | null }; draft?: boolean; user: { login: string } }[];
     };
 
     const prs = searchData.items.filter((item) => titleMentionsKep(item.title, kepNumber));
+    let complete = true;
 
-    return await Promise.all(
+    const results = await Promise.all(
       prs.slice(0, 3).map(async (item): Promise<PRInfo> => {
         const merged_at = item.pull_request?.merged_at ?? null;
         const [reviewStatus, ciStatus] = await Promise.all([
@@ -101,14 +107,15 @@ export async function fetchEnhancementPRs(
           (async () => {
             try {
               const prDetailResp = await githubFetch(`${GITHUB_API_BASE}/repos/${REPO}/pulls/${item.number}`);
-              if (!prDetailResp.ok) return 'unknown' as const;
+              if (!prDetailResp.ok) return undefined;
               const prDetail = (await prDetailResp.json()) as { head: { sha: string } };
               return await fetchCIStatus(REPO, prDetail.head.sha);
             } catch {
-              return 'unknown' as const;
+              return undefined;
             }
           })(),
         ]);
+        if (reviewStatus === undefined || ciStatus === undefined) complete = false;
 
         return {
           number: item.number,
@@ -118,13 +125,14 @@ export async function fetchEnhancementPRs(
           draft: item.draft ?? false,
           merged_at,
           user: item.user,
-          ciStatus,
-          reviewStatus,
+          ciStatus: ciStatus ?? 'unknown',
+          reviewStatus: reviewStatus ?? 'none',
         };
       }),
     );
+    return { data: results, complete };
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -137,7 +145,9 @@ export function fetchKepReadme(kepPath: string): Promise<string | null> {
  * Returns the last `limit` KEPs changed in git history, most-recent first.
  */
 export function fetchRecentlyChangedKeps(limit = 10): Promise<GitChange[]> {
-  return fetchRecentlyChanged(REPO, 'keps/', KEP_FILE_PATTERN, CACHE_KEY_KEP_GIT, limit);
+  // Nearly every PR to kubernetes/enhancements touches keps/, so walking merged
+  // PRs needs the fewest requests and dates changes by when they merged.
+  return fetchRecentlyChanged(REPO, 'keps/', KEP_FILE_PATTERN, CACHE_KEY_KEP_GIT, 'merged-pulls', limit);
 }
 
 export async function fetchAllKeps(

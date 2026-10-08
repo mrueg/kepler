@@ -138,62 +138,103 @@ export interface GitChange {
 }
 
 const CACHE_TTL_GIT = 60 * 60 * 1000; // 1 hour
+// Change sets are fetched in small parallel batches; smaller batches overshoot
+// the `limit` by fewer requests once enough proposals are found.
+const RECENT_CHANGES_BATCH = 5;
 
 /**
- * Returns the last `limit` proposals changed in git history under `path`,
- * most-recent first. `filePattern` must capture the proposal number.
+ * Where to find recent changes:
+ * - `merged-pulls`: recently merged PRs, dated by merge time. One request per
+ *   PR, so it suits repos where almost every PR touches `path`.
+ * - `commits`: commits filtered to `path` on GitHub's side, dated by when they
+ *   landed. Suits squash-merging repos where most PRs don't touch `path`.
+ */
+export type RecentChangesSource = 'merged-pulls' | 'commits';
+
+interface ChangeSet {
+  date: string;
+  /** API path returning the changed files: a commit, or a PR's files list. */
+  filesPath: string;
+}
+
+async function listChangeSets(repo: string, path: string, source: RecentChangesSource): Promise<ChangeSet[] | null> {
+  if (source === 'merged-pulls') {
+    // Sorted by update time, which is never earlier than the merge time, so
+    // recently merged PRs are within the first page.
+    const resp = await githubFetch(
+      `${GITHUB_API_BASE}/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100`,
+    );
+    if (!resp.ok) return null;
+    const pulls = (await resp.json()) as Array<{ number: number; merged_at: string | null }>;
+    return pulls
+      .filter((p): p is { number: number; merged_at: string } => p.merged_at !== null)
+      .sort((a, b) => b.merged_at.localeCompare(a.merged_at))
+      .map((p) => ({ date: p.merged_at, filesPath: `/repos/${repo}/pulls/${p.number}/files?per_page=100` }));
+  }
+
+  const resp = await githubFetch(`${GITHUB_API_BASE}/repos/${repo}/commits?path=${path}&per_page=100`);
+  if (!resp.ok) return null;
+  const commits = (await resp.json()) as Array<{ sha: string; commit: { committer: { date: string } } }>;
+  return commits.map((c) => ({ date: c.commit.committer.date, filesPath: `/repos/${repo}/commits/${c.sha}` }));
+}
+
+async function fetchChangedFiles(filesPath: string): Promise<string[] | null> {
+  try {
+    const resp = await githubFetch(`${GITHUB_API_BASE}${filesPath}`);
+    if (!resp.ok) return null;
+    // A PR's files endpoint returns an array; a commit returns { files }.
+    const data = (await resp.json()) as Array<{ filename: string }> | { files?: Array<{ filename: string }> };
+    return (Array.isArray(data) ? data : data.files ?? []).map((f) => f.filename);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns the last `limit` proposals changed under `path`, most-recent first.
+ * `filePattern` must capture the proposal number.
  */
 export async function fetchRecentlyChanged(
   repo: string,
   path: string,
   filePattern: RegExp,
   cacheKey: string,
+  source: RecentChangesSource,
   limit = 10,
 ): Promise<GitChange[]> {
   const cached = getCached<{ number: string; date: string }[]>(cacheKey, CACHE_TTL_GIT);
   if (cached) return cached.map((c) => ({ number: c.number, date: new Date(c.date) }));
 
-  const commitsResp = await githubFetch(
-    `${GITHUB_API_BASE}/repos/${repo}/commits?path=${path}&per_page=100`,
-  );
-  if (!commitsResp.ok) return [];
-
-  const commits = (await commitsResp.json()) as Array<{
-    sha: string;
-    commit: { author: { date: string } };
-  }>;
+  const changeSets = await listChangeSets(repo, path, source);
+  if (!changeSets) return [];
 
   const seen = new Set<string>();
   const results: GitChange[] = [];
-  const CONCURRENCY = 10;
+  // A failed request could hide a more recent change; don't cache partial results.
+  let complete = true;
 
-  for (let i = 0; i < commits.length && results.length < limit; i += CONCURRENCY) {
-    const batch = commits.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.allSettled(
-      batch.map(async (c) => {
-        const resp = await githubFetch(`${GITHUB_API_BASE}/repos/${repo}/commits/${c.sha}`);
-        if (!resp.ok) return null;
-        const data = (await resp.json()) as { files: Array<{ filename: string }> };
-        return { date: new Date(c.commit.author.date), files: data.files ?? [] };
-      }),
-    );
+  for (let i = 0; i < changeSets.length && results.length < limit; i += RECENT_CHANGES_BATCH) {
+    const batch = changeSets.slice(i, i + RECENT_CHANGES_BATCH);
+    const batchFiles = await Promise.all(batch.map((c) => fetchChangedFiles(c.filesPath)));
 
-    for (const result of batchResults) {
-      if (result.status !== 'fulfilled' || !result.value) continue;
-      const { date, files } = result.value;
+    for (const [j, files] of batchFiles.entries()) {
+      if (!files) {
+        complete = false;
+        continue;
+      }
       for (const file of files) {
-        const match = file.filename.match(filePattern);
-        if (match && !seen.has(match[1])) {
+        const match = file.match(filePattern);
+        if (match && !seen.has(match[1]) && results.length < limit) {
           seen.add(match[1]);
-          results.push({ number: match[1], date });
-          if (results.length >= limit) break;
+          results.push({ number: match[1], date: new Date(batch[j].date) });
         }
       }
-      if (results.length >= limit) break;
     }
   }
 
-  setCache(cacheKey, results.map((r) => ({ number: r.number, date: r.date.toISOString() })));
+  if (complete) {
+    setCache(cacheKey, results.map((r) => ({ number: r.number, date: r.date.toISOString() })));
+  }
   return results;
 }
 
@@ -209,15 +250,18 @@ export interface PRInfo {
   reviewStatus: 'approved' | 'changes_requested' | 'pending' | 'none';
 }
 
-/** Derives an overall review status from the latest actionable review per reviewer. */
+/**
+ * Derives an overall review status from the latest actionable review per
+ * reviewer. Returns undefined when the request fails.
+ */
 export async function fetchReviewStatus(
   repo: string,
   prNumber: number,
   merged: boolean,
-): Promise<PRInfo['reviewStatus']> {
+): Promise<PRInfo['reviewStatus'] | undefined> {
   try {
     const resp = await githubFetch(`${GITHUB_API_BASE}/repos/${repo}/pulls/${prNumber}/reviews`);
-    if (!resp.ok) return 'none';
+    if (!resp.ok) return undefined;
     const reviews = (await resp.json()) as { state: string; user: { login: string } }[];
     const latestByReviewer: Record<string, string> = {};
     for (const review of reviews) {
@@ -229,17 +273,20 @@ export async function fetchReviewStatus(
     if (states.includes('CHANGES_REQUESTED')) return 'changes_requested';
     if (states.includes('APPROVED')) return 'approved';
     if (reviews.length > 0 && !merged) return 'pending';
+    return 'none';
   } catch {
-    // review status is optional
+    return undefined;
   }
-  return 'none';
 }
 
-/** Derives an overall CI status from the check runs of `sha`. */
-export async function fetchCIStatus(repo: string, sha: string): Promise<PRInfo['ciStatus']> {
+/**
+ * Derives an overall CI status from the check runs of `sha`. Returns
+ * undefined when the request fails.
+ */
+export async function fetchCIStatus(repo: string, sha: string): Promise<PRInfo['ciStatus'] | undefined> {
   try {
     const resp = await githubFetch(`${GITHUB_API_BASE}/repos/${repo}/commits/${sha}/check-runs`);
-    if (!resp.ok) return 'unknown';
+    if (!resp.ok) return undefined;
     const { check_runs: runs } = (await resp.json()) as {
       check_runs: { conclusion: string | null; status: string }[];
     };
@@ -250,8 +297,44 @@ export async function fetchCIStatus(repo: string, sha: string): Promise<PRInfo['
     }
     return 'failure';
   } catch {
-    return 'unknown';
+    return undefined;
   }
+}
+
+const PR_STATUS_CACHE_KEY = 'kepler_pr_status_v1';
+const PR_STATUS_TTL = 20 * 60 * 1000; // 20 minutes
+
+type PRStatusCache = Record<string, { data: PRInfo[]; timestamp: number }>;
+
+export interface PRStatusResult {
+  data: PRInfo[];
+  /** False when any request failed, so the data may show 'none'/'unknown' wrongly. */
+  complete: boolean;
+}
+
+/**
+ * Caches the PR list for a proposal (`id`, e.g. "kubernetes/enhancements#753")
+ * for 20 minutes, so repeat visits and arrow-key browsing don't repeat the
+ * ~10 requests per detail page. Incomplete results are returned but not
+ * cached; if loading fails entirely, recent stale data is used instead.
+ */
+export async function cachedPRStatus(id: string, load: () => Promise<PRStatusResult | null>): Promise<PRInfo[]> {
+  const now = Date.now();
+  const cache = readCache<PRStatusCache>(PR_STATUS_CACHE_KEY) ?? {};
+  const hit = cache[id];
+  if (hit && now - hit.timestamp < PR_STATUS_TTL) return hit.data;
+
+  const result = await load();
+  if (result === null) return hit?.data ?? [];
+  if (!result.complete) return result.data;
+
+  // Re-read in case another detail page wrote meanwhile, and drop expired entries.
+  const latest = readCache<PRStatusCache>(PR_STATUS_CACHE_KEY) ?? {};
+  const pruned = Object.fromEntries(
+    Object.entries(latest).filter(([, entry]) => now - entry.timestamp < PR_STATUS_TTL),
+  );
+  setCache(PR_STATUS_CACHE_KEY, { ...pruned, [id]: { data: result.data, timestamp: now } });
+  return result.data;
 }
 
 export function normalizePRState(state: string): PRInfo['state'] {
