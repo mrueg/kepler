@@ -2,11 +2,12 @@ import type { Caep } from '../types/caep';
 import { githubFetch } from '../utils/githubFetch';
 import { firstHeading, parseFrontMatter } from '../utils/frontMatter';
 import { normalizeCaepMetadata } from '../utils/normalize';
-import { fetchAllBatched, fetchTreePaths, getCached, setCache } from './shared';
+import { NotFoundError, fetchAllBatched, fetchTreePaths, getCached, setCache } from './shared';
 
 const REPO = 'kubernetes-sigs/cluster-api';
 const BRANCH = 'main';
-const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`;
+export const CAEP_REPO = REPO;
+export const CAEP_BRANCH = BRANCH;
 export const CACHE_KEY_CAEPS = 'kepler_caeps_v1';
 export const CACHE_KEY_CAEP_TREE = 'kepler_caep_tree_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
@@ -46,8 +47,11 @@ export function caepIdFromReference(ref: string): string | null {
   return match ? match[1] : null;
 }
 
-export function fetchCaepPaths(): Promise<string[]> {
-  return fetchTreePaths(REPO, CAEP_PATH_PATTERN, CACHE_KEY_CAEP_TREE, CACHE_TTL_TREE);
+/** Proposal paths; pass a commit to read it exactly (uncached). */
+export function fetchCaepPaths(ref?: string): Promise<string[]> {
+  return ref
+    ? fetchTreePaths(REPO, CAEP_PATH_PATTERN, null, 0, ref)
+    : fetchTreePaths(REPO, CAEP_PATH_PATTERN, CACHE_KEY_CAEP_TREE, CACHE_TTL_TREE);
 }
 
 export async function findCaepPath(id: string): Promise<string | null> {
@@ -73,8 +77,9 @@ export function parseCaep(path: string, markdown: string): Caep {
   };
 }
 
-export async function fetchCaep(path: string): Promise<Caep> {
-  const response = await githubFetch(`${GITHUB_RAW_BASE}/${encodePath(path)}`);
+export async function fetchCaep(path: string, ref = BRANCH): Promise<Caep> {
+  const response = await githubFetch(`https://raw.githubusercontent.com/${REPO}/${ref}/${encodePath(path)}`);
+  if (response.status === 404) throw new NotFoundError(`${path} not found`);
   if (!response.ok) throw new Error(`Failed to fetch ${path}: ${response.status}`);
   return parseCaep(path, await response.text());
 }
@@ -87,6 +92,21 @@ export function caepSearchText(caep: Caep): string {
     .toLowerCase();
 }
 
+/** Newest first, by the date in the file name. */
+export function compareCaepsByDate(a: Caep, b: Caep): number {
+  return b.date.localeCompare(a.date) || a.id.localeCompare(b.id);
+}
+
+/** Fetches every CAEP at `ref` (a branch or commit), without caching. */
+export async function crawlCaeps(
+  ref = BRANCH,
+  onProgress?: (loaded: number, total: number) => void,
+): Promise<Caep[]> {
+  const paths = await fetchCaepPaths(ref === BRANCH ? undefined : ref);
+  const results = await fetchAllBatched(paths, (p) => fetchCaep(p, ref), onProgress);
+  return results.sort(compareCaepsByDate);
+}
+
 export async function fetchAllCaeps(
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<Caep[]> {
@@ -96,11 +116,7 @@ export async function fetchAllCaeps(
     return cached;
   }
 
-  const paths = await fetchCaepPaths();
-  const results = await fetchAllBatched(paths, fetchCaep, onProgress);
-
-  // Newest first, by the date in the file name.
-  results.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+  const results = await crawlCaeps(BRANCH, onProgress);
   // Strip content before caching to avoid exceeding localStorage size limits
   setCache(CACHE_KEY_CAEPS, results.map(({ content: _content, ...caep }) => caep));
   return results;

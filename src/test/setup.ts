@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { resetSnapshots } from '../api/snapshot';
+import { resetDeltaState } from '../api/delta';
 
 // Minimal in-memory localStorage; Node's built-in one needs --localstorage-file.
 class MemoryStorage {
@@ -17,6 +18,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   resetSnapshots();
+  resetDeltaState();
   // Unmount React trees between component tests (no-op in the Node environment).
   if (typeof document !== 'undefined') {
     const { cleanup } = await import('@testing-library/react');

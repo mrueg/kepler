@@ -70,17 +70,28 @@ export function getCacheTimestamp(key: string): number | null {
 }
 
 /** Fetches the recursive git tree of `repo` and returns blob paths matching `pattern`. */
+/** A proposal file that doesn't exist (at the requested commit). */
+export class NotFoundError extends Error {}
+
+/**
+ * Fetches the recursive git tree of `repo` at `ref` and returns blob paths
+ * matching `pattern`. Pass `cacheKey: null` to bypass the cache, e.g. when
+ * reading a specific commit.
+ */
 export async function fetchTreePaths(
   repo: string,
   pattern: RegExp,
-  cacheKey: string,
+  cacheKey: string | null,
   ttl: number,
+  ref = 'HEAD',
 ): Promise<string[]> {
-  const cached = getCached<string[]>(cacheKey, ttl);
-  if (cached) return cached;
+  if (cacheKey) {
+    const cached = getCached<string[]>(cacheKey, ttl);
+    if (cached) return cached;
+  }
 
   const response = await githubFetch(
-    `${GITHUB_API_BASE}/repos/${repo}/git/trees/HEAD?recursive=1`,
+    `${GITHUB_API_BASE}/repos/${repo}/git/trees/${ref}?recursive=1`,
   );
   if (response.status === 403 || response.status === 429)
     throw new Error('GitHub API rate limit exceeded. Please try again later.');
@@ -96,7 +107,7 @@ export async function fetchTreePaths(
     .filter((item) => item.type === 'blob' && pattern.test(item.path))
     .map((item) => item.path);
 
-  setCache(cacheKey, paths);
+  if (cacheKey) setCache(cacheKey, paths);
   return paths;
 }
 
