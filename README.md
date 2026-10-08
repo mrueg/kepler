@@ -1,6 +1,6 @@
 # Kepler – Kubernetes Enhancement Proposal Explorer
 
-A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps) and [Gateway API Enhancement Proposals (GEPs)](https://github.com/kubernetes-sigs/gateway-api/tree/main/geps).
+A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https://github.com/kubernetes/enhancements/tree/master/keps) , [Gateway API Enhancement Proposals (GEPs)](https://github.com/kubernetes-sigs/gateway-api/tree/main/geps) and [Cluster API Enhancement Proposals (CAEPs)](https://github.com/kubernetes-sigs/cluster-api/tree/main/docs/proposals).
 
 ![Kepler search page](docs/screenshot-search.png)
 
@@ -9,7 +9,7 @@ A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https:
 ## Features
 
 ### Browsing & Navigation
-- 📋 **Browse KEPs and GEPs** fetched live from their respective GitHub repositories
+- 📋 **Browse KEPs, GEPs and CAEPs** fetched live from their respective GitHub repositories
 - 🔀 **Grid and table views** — toggle between card grid and sortable table layout
 - 📄 **Detail view** showing full metadata: authors, reviewers, approvers, milestones, rendered README, related PRs with CI/review status, and links to GitHub
 - ⌨️ **Keyboard navigation** — use arrow keys to move between proposals and `B` to bookmark
@@ -28,7 +28,7 @@ A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https:
   - Top contributors
 
 ### Personalization
-- 🔖 **Bookmarks** saved to localStorage for KEPs and GEPs
+- 🔖 **Bookmarks** saved to localStorage for KEPs, GEPs and CAEPs
 - 🌙 **Dark/light theme** toggle persisted to localStorage
 - ⚡ **Client-side caching** in localStorage (6-hour TTL) to avoid re-fetching on subsequent visits
 - 🕐 **"What's New" sidebar** showing recently changed proposals from Git history
@@ -54,7 +54,7 @@ npm run start
 
 - [Next.js](https://nextjs.org/) with App Router
 - [React](https://react.dev) + [TypeScript](https://www.typescriptlang.org/)
-- [js-yaml](https://github.com/nodeca/js-yaml) for parsing KEP/GEP YAML metadata
+- [js-yaml](https://github.com/nodeca/js-yaml) for parsing KEP/GEP YAML metadata and CAEP front matter
 - [react-markdown](https://github.com/remarkjs/react-markdown) + [remark-gfm](https://github.com/remarkjs/remark-gfm) for rendering proposal READMEs
 - [Recharts](https://recharts.org/) for analytics charts
 - [GitHub REST API](https://docs.github.com/en/rest) + [raw.githubusercontent.com](https://raw.githubusercontent.com) for data fetching

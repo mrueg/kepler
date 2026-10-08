@@ -3,9 +3,10 @@
 import { useSyncExternalStore } from 'react';
 import { CACHE_KEY_KEPS } from '../api/github';
 import { CACHE_KEY_GEPS } from '../api/gatewayapi';
+import { CACHE_KEY_CAEPS } from '../api/clusterapi';
 import { CACHE_CHANGE_EVENT, clearCache, getCacheTimestamp } from '../api/shared';
 
-const CACHE_KEYS = [CACHE_KEY_KEPS, CACHE_KEY_GEPS];
+const CACHE_KEYS = [CACHE_KEY_KEPS, CACHE_KEY_GEPS, CACHE_KEY_CAEPS];
 const MINUTE_MS = 60_000;
 
 function subscribe(onChange: () => void): () => void {

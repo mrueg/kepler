@@ -1,5 +1,6 @@
 import type { KepStatus, KepStage } from '../types/kep';
 import type { GepStatus } from '../types/gep';
+import type { CaepStatus } from '../types/caep';
 import { KEP_STATUS_COLORS, KEP_STAGE_COLORS } from '../utils/kep';
 import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
@@ -35,6 +36,16 @@ export function StaleBadge() {
 export function GepStatusBadge({ status }: { status?: GepStatus }) {
   if (!status) return null;
   return <Badge text={status} color={GEP_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR} />;
+}
+
+export function CaepStatusBadge({ status }: { status?: CaepStatus }) {
+  if (!status) return null;
+  const color = status === 'experimental' ? '#06b6d4' : KEP_STATUS_COLORS[status];
+  return <Badge text={status} color={color ?? DEFAULT_STATUS_COLOR} capitalize />;
+}
+
+export function ArchivedBadge() {
+  return <Badge text="Archived" color={DEFAULT_STATUS_COLOR} />;
 }
 
 interface BookmarkButtonProps {

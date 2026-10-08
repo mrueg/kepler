@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchAllKeps, CACHE_KEY_KEPS, CACHE_KEY_TREE } from '../api/github';
 import { fetchAllGeps, CACHE_KEY_GEPS, CACHE_KEY_GEP_TREE } from '../api/gatewayapi';
+import { fetchAllCaeps, CACHE_KEY_CAEPS, CACHE_KEY_CAEP_TREE } from '../api/clusterapi';
 import { clearCache } from '../api/shared';
 import type { Kep } from '../types/kep';
 import type { Gep } from '../types/gep';
+import type { Caep } from '../types/caep';
 
 export interface UseProposalsResult<T> {
   items: T[];
@@ -66,6 +68,7 @@ function useProposals<T>(
 
 const KEP_CACHE_KEYS = [CACHE_KEY_KEPS, CACHE_KEY_TREE];
 const GEP_CACHE_KEYS = [CACHE_KEY_GEPS, CACHE_KEY_GEP_TREE];
+const CAEP_CACHE_KEYS = [CACHE_KEY_CAEPS, CACHE_KEY_CAEP_TREE];
 
 export function useKeps(): UseProposalsResult<Kep> {
   return useProposals(fetchAllKeps, KEP_CACHE_KEYS, 'Failed to load KEPs');
@@ -73,4 +76,8 @@ export function useKeps(): UseProposalsResult<Kep> {
 
 export function useGeps(): UseProposalsResult<Gep> {
   return useProposals(fetchAllGeps, GEP_CACHE_KEYS, 'Failed to load GEPs');
+}
+
+export function useCaeps(): UseProposalsResult<Caep> {
+  return useProposals(fetchAllCaeps, CAEP_CACHE_KEYS, 'Failed to load CAEPs');
 }
