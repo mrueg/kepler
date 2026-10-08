@@ -9,9 +9,10 @@ import { useUrlSync } from '../hooks/useUrlSync';
 import { KepCard } from '../components/KepCard';
 import { KepTable } from '../components/KepTable';
 import { LoadStatus } from '../components/LoadingBar';
-import { ViewToggle, Pagination, type ViewMode } from '../components/Controls';
+import { ViewToggle, Pagination } from '../components/Controls';
+import { readListDisplayState, writeListDisplayState, type ViewMode } from '../utils/listParams';
 import { SearchAndFilter, hasActiveFilters, type Filters } from '../components/SearchAndFilter';
-import { isStale, sortKeps, compareVersions, kepSearchText, type KepSortKey } from '../utils/kep';
+import { isStale, sortKeps, compareVersions, kepSearchText, KEP_SORT_KEYS, type KepSortKey } from '../utils/kep';
 import type { Kep } from '../types/kep';
 
 const PAGE_SIZE = 48;
@@ -27,14 +28,15 @@ export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
     stage: searchParams.get('stage')?.split(',').filter(Boolean) ?? [],
     milestone: searchParams.get('milestone') ?? '',
     stale: searchParams.get('stale') === 'true',
-    bookmarked: false,
+    bookmarked: searchParams.get('bookmarked') === 'true',
   });
   const [page, setPage] = useState(() => {
     const p = parseInt(searchParams.get('page') ?? '1', 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>();
+  const [initialDisplay] = useState(() => readListDisplayState(searchParams, KEP_SORT_KEYS));
+  const [viewMode, setViewMode] = useState<ViewMode>(initialDisplay.viewMode);
+  const { sortKey, sortDir, handleSort } = useSort<KepSortKey>(initialDisplay.sortKey, initialDisplay.sortDir);
 
   const urlParams = new URLSearchParams();
   if (filters.query) urlParams.set('q', filters.query);
@@ -43,6 +45,8 @@ export function KepListPage({ data }: { data: UseProposalsResult<Kep> }) {
   if (filters.stage.length) urlParams.set('stage', filters.stage.join(','));
   if (filters.milestone) urlParams.set('milestone', filters.milestone);
   if (filters.stale) urlParams.set('stale', 'true');
+  if (filters.bookmarked) urlParams.set('bookmarked', 'true');
+  writeListDisplayState(urlParams, { viewMode, sortKey, sortDir });
   if (page > 1) urlParams.set('page', String(page));
   useUrlSync(urlParams, '/');
 

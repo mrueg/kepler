@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GepListPage } from './GepListPage';
 import { WhatsNew } from '../components/WhatsNew';
-import { TabBar } from '../components/Controls';
+import { TabBar, TabPanel } from '../components/Controls';
 import { useGeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
 import { fetchRecentlyChangedGeps } from '../api/gatewayapi';
@@ -54,10 +54,12 @@ export function GepSection() {
 
   return (
     <div>
-      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} />
-      {activeTab === 'list' && <GepListPage data={data} />}
-      {activeTab === 'whats-new' && <GepWhatsNew data={data} />}
-      {activeTab === 'stats' && <GepStats data={data} />}
+      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} idPrefix="gep" label="GEP views" />
+      <TabPanel idPrefix="gep" active={activeTab}>
+        {activeTab === 'list' && <GepListPage data={data} />}
+        {activeTab === 'whats-new' && <GepWhatsNew data={data} />}
+        {activeTab === 'stats' && <GepStats data={data} />}
+      </TabPanel>
     </div>
   );
 }

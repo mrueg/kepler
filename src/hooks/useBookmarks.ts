@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const KEP_STORAGE_KEY = 'kepler_bookmarks_v1';
 const GEP_STORAGE_KEY = 'kepler_gep_bookmarks_v1';
@@ -11,16 +11,28 @@ export interface UseBookmarksResult {
   isBookmarked: (number: string) => boolean;
 }
 
+function readBookmarks(storageKey: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(storageKey);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 function useBookmarks(storageKey: string): UseBookmarksResult {
-  const [bookmarks, setBookmarks] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-    } catch {
-      return new Set();
+  const [bookmarks, setBookmarks] = useState<Set<string>>(() => readBookmarks(storageKey));
+
+  // Pick up bookmarks changed in other tabs (the storage event only fires for
+  // writes from other documents, so this tab's own writes don't loop back).
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === storageKey || e.key === null) setBookmarks(readBookmarks(storageKey));
     }
-  });
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [storageKey]);
 
   const toggleBookmark = useCallback((number: string) => {
     setBookmarks((prev) => {

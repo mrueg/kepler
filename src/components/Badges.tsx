@@ -3,26 +3,11 @@ import type { GepStatus } from '../types/gep';
 import { KEP_STATUS_COLORS, KEP_STAGE_COLORS } from '../utils/kep';
 import { GEP_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../utils/gep';
 
-interface BadgeProps {
-  text: string;
-  color: string;
-}
-
-function Badge({ text, color }: BadgeProps) {
+function Badge({ text, color, capitalize = false }: { text: string; color: string; capitalize?: boolean }) {
   return (
     <span
-      style={{
-        display: 'inline-block',
-        padding: '2px 8px',
-        borderRadius: '12px',
-        fontSize: '0.72rem',
-        fontWeight: 600,
-        textTransform: 'capitalize',
-        backgroundColor: color + '22',
-        color: color,
-        border: `1px solid ${color}44`,
-        letterSpacing: '0.02em',
-      }}
+      className={`status-badge${capitalize ? ' status-badge--capitalize' : ''}`}
+      style={{ '--badge-color': color } as React.CSSProperties}
     >
       {text}
     </span>
@@ -31,12 +16,12 @@ function Badge({ text, color }: BadgeProps) {
 
 export function StatusBadge({ status }: { status?: KepStatus }) {
   if (!status) return null;
-  return <Badge text={status} color={KEP_STATUS_COLORS[status] ?? '#6b7280'} />;
+  return <Badge text={status} color={KEP_STATUS_COLORS[status] ?? '#6b7280'} capitalize />;
 }
 
 export function StageBadge({ stage }: { stage?: KepStage }) {
   if (!stage) return null;
-  return <Badge text={stage} color={KEP_STAGE_COLORS[stage] ?? '#6b7280'} />;
+  return <Badge text={stage} color={KEP_STAGE_COLORS[stage] ?? '#6b7280'} capitalize />;
 }
 
 export function StaleBadge() {
@@ -49,12 +34,7 @@ export function StaleBadge() {
 
 export function GepStatusBadge({ status }: { status?: GepStatus }) {
   if (!status) return null;
-  const color = GEP_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR;
-  return (
-    <span className="gep-status-badge" style={{ '--gep-badge-color': color } as React.CSSProperties}>
-      {status}
-    </span>
-  );
+  return <Badge text={status} color={GEP_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR} />;
 }
 
 interface BookmarkButtonProps {

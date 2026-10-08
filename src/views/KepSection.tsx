@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { KepListPage } from './KepListPage';
 import { ReleasePage } from './ReleasePage';
 import { WhatsNew } from '../components/WhatsNew';
-import { TabBar } from '../components/Controls';
+import { TabBar, TabPanel } from '../components/Controls';
 import { useKeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
 import { fetchRecentlyChangedKeps } from '../api/github';
@@ -68,11 +68,13 @@ export function KepSection() {
 
   return (
     <div>
-      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} />
-      {activeTab === 'list' && <KepListPage data={data} />}
-      {activeTab === 'release' && <ReleasePage data={data} />}
-      {activeTab === 'whats-new' && <KepWhatsNew data={data} />}
-      {activeTab === 'stats' && <KepStats data={data} />}
+      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} idPrefix="kep" label="KEP views" />
+      <TabPanel idPrefix="kep" active={activeTab}>
+        {activeTab === 'list' && <KepListPage data={data} />}
+        {activeTab === 'release' && <ReleasePage data={data} />}
+        {activeTab === 'whats-new' && <KepWhatsNew data={data} />}
+        {activeTab === 'stats' && <KepStats data={data} />}
+      </TabPanel>
     </div>
   );
 }
