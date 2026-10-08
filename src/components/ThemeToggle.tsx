@@ -22,7 +22,12 @@ export function ThemeToggle() {
   function toggle() {
     const isDark = !dark;
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    localStorage.setItem('kepler_theme', isDark ? 'dark' : 'light');
+    try {
+      localStorage.setItem('kepler_theme', isDark ? 'dark' : 'light');
+    } catch {
+      // Storage can be unavailable (private mode, blocked site data); the
+      // theme still applies for this page view.
+    }
   }
 
   return (

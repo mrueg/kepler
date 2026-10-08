@@ -59,7 +59,7 @@ function MilestoneHeatmap({ data }: { data: HeatmapCell[] }) {
       {data.map(({ version, count }) => {
         const intensity = count / maxCount;
         return (
-          <div key={version} className="heatmap-cell" title={`v${version}: ${count} KEP milestone event${count !== 1 ? 's' : ''}`}>
+          <div key={version} className="heatmap-cell" title={`v${version}: ${count} KEP${count !== 1 ? 's' : ''} with milestone activity`}>
             <div
               className="heatmap-cell-block"
               style={{ opacity: 0.15 + intensity * 0.85 }}
@@ -268,11 +268,15 @@ export function KepStats({ data }: { data: UseProposalsResult<Kep> }) {
 
   const milestoneHeatmapData = useMemo(
     () =>
-      countBy(keps, (k) =>
-        [k['latest-milestone'], k.milestone?.alpha, k.milestone?.beta, k.milestone?.stable].map(
-          (v) => normalizeVersion(v) ?? undefined,
+      // Each KEP counts once per release it had activity in; latest-milestone
+      // usually repeats one of alpha/beta/stable and must not be counted twice.
+      countBy(keps, (k) => [
+        ...new Set(
+          [k['latest-milestone'], k.milestone?.alpha, k.milestone?.beta, k.milestone?.stable].map(
+            (v) => normalizeVersion(v) ?? undefined,
+          ),
         ),
-      )
+      ])
         .map(({ key, count }) => ({ version: key, count }))
         .sort((a, b) => compareVersions(a.version, b.version)),
     [keps],
