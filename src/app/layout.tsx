@@ -4,6 +4,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { QuickJump } from '../components/QuickJump';
 import { CacheFreshnessIndicator } from '../components/CacheFreshnessIndicator';
 import { RateLimitIndicator } from '../components/RateLimitIndicator';
+import { TokenSettings } from '../components/TokenSettings';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -99,6 +100,7 @@ export default function RootLayout({
             </p>
             <CacheFreshnessIndicator />
             <RateLimitIndicator />
+            <TokenSettings />
           </footer>
         </div>
       </body>

@@ -1613,3 +1613,44 @@ a:hover { text-decoration: underline; }
 @media (max-width: 600px) {
   .quick-jump-trigger kbd { display: none; }
 }
+
+/* GitHub token settings */
+.token-settings-trigger {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.token-settings-trigger:hover { color: var(--accent); background: var(--gh-link-hover-bg); }
+.token-settings-trigger--warning { color: var(--error-text); }
+.token-dialog {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0,0,0,.25);
+  padding: 20px;
+}
+.token-dialog-title { font-size: 1.1rem; margin-bottom: 8px; }
+.token-dialog-text { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 10px; }
+.token-dialog-steps { font-size: 0.875rem; padding-left: 20px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
+.token-dialog-form { display: flex; flex-direction: column; gap: 6px; }
+.token-dialog-label { font-size: 0.8rem; font-weight: 600; }
+.token-dialog-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+.token-dialog-input:focus { outline: none; border-color: var(--accent); }
+.token-dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.token-dialog-error { margin-top: 10px; font-size: 0.85rem; color: var(--error-text); }
+.token-dialog-success { margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
