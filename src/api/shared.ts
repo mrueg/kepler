@@ -38,9 +38,10 @@ function notifyCacheChange(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(CACHE_CHANGE_EVENT));
 }
 
-export function setCache<T>(key: string, data: T): void {
+/** `timestamp` defaults to now; pass the data's own age, e.g. a snapshot's. */
+export function setCache<T>(key: string, data: T, timestamp = Date.now()): void {
   try {
-    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+    localStorage.setItem(key, JSON.stringify({ data, timestamp }));
     notifyCacheChange();
   } catch {
     // localStorage might be full

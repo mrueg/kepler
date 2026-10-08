@@ -31,7 +31,7 @@ A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https:
 - 🔖 **Bookmarks** saved to localStorage for KEPs, GEPs and CAEPs
 - 🌙 **Dark/light theme** toggle persisted to localStorage
 - 🔑 **Optional GitHub token** — paste a fine-grained token (public repositories, read-only) to raise the GitHub API limit from 60 to 5,000 requests per hour; it's stored only in your browser and sent only to `api.github.com`
-- ⚡ **Client-side caching** in localStorage (6-hour TTL) to avoid re-fetching on subsequent visits
+- ⚡ **Prebuilt data**, refreshed every 3 hours, with client-side caching in localStorage and a live fallback
 - 🕐 **"What's New" sidebar** showing recently changed proposals from Git history
 
 ### General
@@ -43,6 +43,16 @@ A web application for exploring [Kubernetes Enhancement Proposals (KEPs)](https:
 npm install
 npm run dev
 ```
+
+### Prebuilt data
+
+The deployed site serves proposal data prebuilt during deployment (`public/data/*.json`), refreshed every 3 hours by a scheduled workflow, so visitors don't have to fetch it from GitHub. To use the same data locally, run:
+
+```bash
+GITHUB_TOKEN=$(gh auth token) npm run fetch-data   # token optional, raises the rate limit
+```
+
+Without it, the app fetches everything live from GitHub, as it does when a snapshot is missing or more than a day old.
 
 ## Build
 

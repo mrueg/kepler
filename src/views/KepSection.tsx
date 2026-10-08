@@ -11,7 +11,7 @@ import { WhatsNew } from '../components/WhatsNew';
 import { TabBar, TabPanel } from '../components/Controls';
 import { useKeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
-import { fetchRecentlyChangedKeps } from '../api/github';
+import { loadRecentKepChanges } from '../api/loaders';
 import type { Kep } from '../types/kep';
 
 // The stats tab pulls in Recharts; load it only when the tab is opened.
@@ -36,7 +36,7 @@ function isValidTab(value: string | null): value is Tab {
 
 // Separate component so the git-history requests only run while the tab is open.
 function KepWhatsNew({ data }: { data: UseProposalsResult<Kep> }) {
-  const { changes, loading } = useRecentChanges(fetchRecentlyChangedKeps);
+  const { changes, loading } = useRecentChanges(loadRecentKepChanges);
   return <WhatsNew keps={data.items} recentKepChanges={changes} loading={data.loading || loading} />;
 }
 

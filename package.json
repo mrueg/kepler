@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "fetch-data": "tsx scripts/fetch-data.ts"
   },
   "dependencies": {
     "js-yaml": "^5.4.2",
@@ -34,6 +35,7 @@
     "eslint": "^10.12.0",
     "eslint-config-next": "16.3.8",
     "jsdom": "^30.1.2",
+    "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.71.0",
     "vitest": "^5.0.3"
