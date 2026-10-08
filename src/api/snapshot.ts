@@ -6,6 +6,8 @@
 export interface Snapshot<T> {
   /** ISO time the data was fetched. */
   generatedAt: string;
+  /** The repo commit the data was read at, so later changes can be applied. */
+  commit?: string;
   data: T;
 }
 

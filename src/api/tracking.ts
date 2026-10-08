@@ -43,6 +43,7 @@ interface GitHubIssue {
   state: string;
   html_url: string;
   labels: GitHubLabel[];
+  milestone?: { number: number } | null;
   pull_request?: unknown;
 }
 
@@ -133,4 +134,32 @@ export async function fetchTrackedEnhancements(milestone: ReleaseMilestone): Pro
   const pruned = Object.fromEntries(Object.entries(latest).filter(([, e]) => now - e.timestamp < CACHE_TTL));
   setCache(CACHE_KEY_TRACKING, { ...pruned, [milestone.title]: { data, timestamp: now } });
   return data;
+}
+
+/**
+ * Updates `items` with issues changed since `since` (ISO time): one request
+ * for recently updated issues across the repo. Issues still opted in to
+ * `milestone` are replaced or added; ones that left it are removed. Returns
+ * null if there were too many changes to see in one page.
+ */
+export async function applyTrackingChangesSince(
+  milestone: ReleaseMilestone,
+  items: TrackedEnhancement[],
+  since: string,
+): Promise<TrackedEnhancement[] | null> {
+  const resp = await githubFetch(
+    `${GITHUB_API_BASE}/repos/${REPO}/issues?state=all&since=${encodeURIComponent(since)}&per_page=${PAGE_SIZE}`,
+  );
+  if (!resp.ok) return null;
+  const updated = ((await resp.json()) as GitHubIssue[]).filter((i) => !i.pull_request);
+  if (updated.length >= PAGE_SIZE) return null;
+
+  const byNumber = new Map(items.map((i) => [i.number, i]));
+  for (const issue of updated) {
+    const inRelease =
+      issue.milestone?.number === milestone.number && issue.labels.some((l) => l.name === 'lead-opted-in');
+    if (inRelease) byNumber.set(String(issue.number), toTrackedEnhancement(issue));
+    else byNumber.delete(String(issue.number));
+  }
+  return [...byNumber.values()];
 }

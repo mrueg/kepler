@@ -9,9 +9,11 @@
 
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fetchAllKeps, fetchKepPaths, fetchRecentlyChangedKeps } from '../src/api/github';
-import { fetchAllGeps, fetchGepPaths, fetchRecentlyChangedGeps } from '../src/api/gatewayapi';
-import { fetchAllCaeps, fetchCaepPaths } from '../src/api/clusterapi';
+import { KEP_BRANCH, KEP_REPO, crawlKeps, fetchKepPaths, fetchRecentlyChangedKeps } from '../src/api/github';
+import { GEP_BRANCH, GEP_REPO, crawlGeps, fetchGepPaths, fetchRecentlyChangedGeps } from '../src/api/gatewayapi';
+import { CAEP_BRANCH, CAEP_REPO, crawlCaeps, fetchCaepPaths } from '../src/api/clusterapi';
+import { GITHUB_API_BASE } from '../src/api/shared';
+import { githubFetch } from '../src/utils/githubFetch';
 import { fetchReleaseTracking } from '../src/api/loaders';
 import type { Snapshot, SnapshotName } from '../src/api/snapshot';
 import { shouldSendToken } from '../src/utils/githubToken';
@@ -36,19 +38,22 @@ if (token) {
   console.warn('GITHUB_TOKEN is not set; using the unauthenticated rate limit (60 requests/hour).');
 }
 
-function write<T>(name: SnapshotName | 'meta', data: T): void {
-  const snapshot: Snapshot<T> = { generatedAt, data };
+function write<T>(name: SnapshotName | 'meta', data: T, commit?: string): void {
+  const snapshot: Snapshot<T> = { generatedAt, ...(commit ? { commit } : {}), data };
   writeFileSync(join(OUT_DIR, `${name}.json`), JSON.stringify(snapshot));
 }
 
 const counts: Record<string, number> = {};
 const skipped: string[] = [];
 
-async function dataset<T>(name: SnapshotName, build: () => Promise<{ data: T; count: number }>): Promise<void> {
+async function dataset<T>(
+  name: SnapshotName,
+  build: () => Promise<{ data: T; count: number; commit?: string }>,
+): Promise<void> {
   const started = Date.now();
   try {
-    const { data, count } = await build();
-    write(name, data);
+    const { data, count, commit } = await build();
+    write(name, data, commit);
     counts[name] = count;
     console.log(`${name}: ${count} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
   } catch (err) {
@@ -57,6 +62,13 @@ async function dataset<T>(name: SnapshotName, build: () => Promise<{ data: T; co
     // GitHub Actions annotation; the site falls back to live data for this one.
     console.log(`::warning title=Snapshot ${name} skipped::${message}`);
   }
+}
+
+/** The commit a branch points to; the snapshot is read at it so later changes can be applied. */
+async function headCommit(repo: string, branch: string): Promise<string> {
+  const resp = await githubFetch(`${GITHUB_API_BASE}/repos/${repo}/commits/${branch}`);
+  if (!resp.ok) throw new Error(`couldn't resolve ${repo}@${branch}: ${resp.status}`);
+  return ((await resp.json()) as { sha: string }).sha;
 }
 
 async function crawl<T>(label: string, fetchPaths: () => Promise<string[]>, fetchAll: () => Promise<T[]>) {
@@ -72,28 +84,40 @@ async function main(): Promise<void> {
   rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR, { recursive: true });
 
+  // Everything is read at a fixed commit, so a commit landing mid-crawl can't
+  // produce a mixed snapshot, and the site can apply later changes on top.
+  const commits = new Map<string, string>();
+  const commitOf = async (repo: string, branch: string) => {
+    if (!commits.has(repo)) commits.set(repo, await headCommit(repo, branch));
+    return commits.get(repo)!;
+  };
+
   await dataset('keps', async () => {
+    const commit = await commitOf(KEP_REPO, KEP_BRANCH);
     // kep.readme is already limited to a README excerpt.
-    const keps = await crawl('KEPs', fetchKepPaths, () => fetchAllKeps());
-    return { data: keps, count: keps.length };
+    const keps = await crawl('KEPs', () => fetchKepPaths(commit), () => crawlKeps(commit));
+    return { data: keps, count: keps.length, commit };
   });
   await dataset('geps', async () => {
-    const geps = await crawl('GEPs', fetchGepPaths, () => fetchAllGeps());
-    return { data: geps.map((g) => ({ ...g, content: truncateText(g.content) })), count: geps.length };
+    const commit = await commitOf(GEP_REPO, GEP_BRANCH);
+    const geps = await crawl('GEPs', () => fetchGepPaths(commit), () => crawlGeps(commit));
+    return { data: geps.map((g) => ({ ...g, content: truncateText(g.content) })), count: geps.length, commit };
   });
   await dataset('caeps', async () => {
-    const caeps = await crawl('CAEPs', fetchCaepPaths, () => fetchAllCaeps());
-    return { data: caeps.map((c) => ({ ...c, content: truncateText(c.content) })), count: caeps.length };
+    const commit = await commitOf(CAEP_REPO, CAEP_BRANCH);
+    const caeps = await crawl('CAEPs', () => fetchCaepPaths(commit), () => crawlCaeps(commit));
+    return { data: caeps.map((c) => ({ ...c, content: truncateText(c.content) })), count: caeps.length, commit };
   });
-  for (const [name, fetchRecent] of [
-    ['recent-keps', fetchRecentlyChangedKeps],
-    ['recent-geps', fetchRecentlyChangedGeps],
+  for (const [name, fetchRecent, repo, branch] of [
+    ['recent-keps', fetchRecentlyChangedKeps, KEP_REPO, KEP_BRANCH],
+    ['recent-geps', fetchRecentlyChangedGeps, GEP_REPO, GEP_BRANCH],
   ] as const) {
     await dataset(name, async () => {
+      const commit = await commitOf(repo, branch);
       const changes = await fetchRecent();
       // These return [] on failure rather than throwing.
       if (changes.length === 0) throw new Error('no recent changes could be fetched');
-      return { data: changes.map((c) => ({ number: c.number, date: c.date.toISOString() })), count: changes.length };
+      return { data: changes.map((c) => ({ number: c.number, date: c.date.toISOString() })), count: changes.length, commit };
     });
   }
   await dataset('release-tracking', async () => {
