@@ -112,11 +112,25 @@ export function compareVersions(a: string, b: string): number {
 
 /**
  * Lowercased text that search queries are matched against: title, number,
- * slug, authors and the README excerpt (when loaded).
+ * slug, authors, feature gate names and the README excerpt (when loaded).
  */
 export function kepSearchText(kep: Kep): string {
-  return [kep.title, kep.number, kep.slug, ...(kep.authors ?? []), kep.readme]
+  const gates = kep['feature-gates']?.map((g) => g.name) ?? [];
+  return [kep.title, kep.number, kep.slug, ...(kep.authors ?? []), ...gates, kep.readme]
     .filter(Boolean)
     .join('\n')
     .toLowerCase();
+}
+
+export interface FeatureGateEntry {
+  name: string;
+  components: string[];
+  kep: Kep;
+}
+
+/** Every feature gate declared in a kep.yaml, sorted by gate name. */
+export function listFeatureGates(keps: Kep[]): FeatureGateEntry[] {
+  return keps
+    .flatMap((kep) => (kep['feature-gates'] ?? []).map((g) => ({ name: g.name, components: g.components ?? [], kep })))
+    .sort((a, b) => a.name.localeCompare(b.name) || Number(a.kep.number) - Number(b.kep.number));
 }

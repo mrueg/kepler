@@ -1,4 +1,4 @@
-import type { KepMetadata, KepMilestone, KepStage, KepStatus } from '../types/kep';
+import type { KepFeatureGate, KepMetadata, KepMilestone, KepStage, KepStatus } from '../types/kep';
 import type { GepMetadata, GepRelationship, GepRelationships, GepStatus } from '../types/gep';
 
 // Proposal metadata is hand-written YAML, so any field can have an unexpected
@@ -35,6 +35,26 @@ function withoutUndefined<T extends object>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 }
 
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  // YAML 1.2 (js-yaml) reads yes/no as strings; at least one kep.yaml uses them.
+  const s = typeof value === 'string' ? value.trim().toLowerCase() : undefined;
+  if (s === 'true' || s === 'yes') return true;
+  if (s === 'false' || s === 'no') return false;
+  return undefined;
+}
+
+/** Feature gates as `{ name, components }` entries; bare strings are gate names. */
+function asFeatureGates(value: unknown): KepFeatureGate[] | undefined {
+  const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+  const gates = items.flatMap((item): KepFeatureGate[] => {
+    const name = asString(isRecord(item) ? item.name : item);
+    if (!name) return [];
+    return [withoutUndefined({ name, components: isRecord(item) ? asStringList(item.components) : undefined })];
+  });
+  return gates.length > 0 ? gates : undefined;
+}
+
 function asMilestone(value: unknown): KepMilestone | undefined {
   if (!isRecord(value)) return undefined;
   const milestone = withoutUndefined({
@@ -66,6 +86,8 @@ export function normalizeKepMetadata(raw: unknown): KepMetadata {
     'latest-milestone': asString(r['latest-milestone']),
     'kep-number': asNumber(r['kep-number']),
     'prr-approvers': asStringList(r['prr-approvers']),
+    'feature-gates': asFeatureGates(r['feature-gates']),
+    'disable-supported': asBoolean(r['disable-supported']),
   });
 }
 
