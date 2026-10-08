@@ -5,6 +5,9 @@ on:
     branches:
       - main
   workflow_dispatch:
+  # Refresh the prebuilt proposal data (see scripts/fetch-data.ts).
+  schedule:
+    - cron: '17 */3 * * *'
 
 permissions:
   contents: read
@@ -17,6 +20,8 @@ concurrency:
 
 jobs:
   checks:
+    # Scheduled runs only refresh data for a commit that already passed checks.
+    if: github.event_name != 'schedule'
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
@@ -24,6 +29,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: checks
+    if: ${{ !cancelled() && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,6 +46,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fetch proposal data
+        run: npm run fetch-data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: npm run build

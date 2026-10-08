@@ -8,7 +8,7 @@ import { WhatsNew } from '../components/WhatsNew';
 import { TabBar, TabPanel } from '../components/Controls';
 import { useGeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
-import { fetchRecentlyChangedGeps } from '../api/gatewayapi';
+import { loadRecentGepChanges } from '../api/loaders';
 import type { Gep } from '../types/gep';
 
 // The stats tab pulls in Recharts; load it only when the tab is opened.
@@ -30,7 +30,7 @@ function isValidTab(value: string | null): value is Tab {
 
 // Separate component so the git-history requests only run while the tab is open.
 function GepWhatsNew({ data }: { data: UseProposalsResult<Gep> }) {
-  const { changes, loading } = useRecentChanges(fetchRecentlyChangedGeps);
+  const { changes, loading } = useRecentChanges(loadRecentGepChanges);
   return <WhatsNew geps={data.items} recentGepChanges={changes} loading={data.loading || loading} />;
 }
 

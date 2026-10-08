@@ -25,3 +25,6 @@ dist-ssr
 *.sln
 *.sw?
 tsconfig.tsbuildinfo
+
+# Prebuilt data (npm run fetch-data)
+/public/data/

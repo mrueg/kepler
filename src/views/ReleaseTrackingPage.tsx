@@ -7,14 +7,8 @@ import type { UseProposalsResult } from '../hooks/useProposals';
 import { useUrlSync } from '../hooks/useUrlSync';
 import { Badge, StageBadge } from '../components/Badges';
 import { RateLimitHelp } from '../components/TokenSettings';
-import {
-  fetchReleaseMilestones,
-  fetchTrackedEnhancements,
-  pickCurrentMilestone,
-  type ReleaseMilestone,
-  type TrackedEnhancement,
-  type TrackingStatus,
-} from '../api/tracking';
+import type { ReleaseMilestone, TrackedEnhancement, TrackingStatus } from '../api/tracking';
+import { loadReleaseTracking } from '../api/loaders';
 import { formatSig } from '../utils/kep';
 import type { Kep, KepStage } from '../types/kep';
 
@@ -71,38 +65,21 @@ export function ReleaseTrackingPage({ data }: { data: UseProposalsResult<Kep> })
 
   useEffect(() => {
     let cancelled = false;
-    fetchReleaseMilestones()
-      .then((ms) => {
-        if (cancelled) return;
-        const current = pickCurrentMilestone(ms);
-        if (current) setMilestone(current);
-        else setError('No release milestone found.');
+    loadReleaseTracking()
+      .then((tracking) => {
+        if (!cancelled) {
+          setMilestone(tracking.milestone);
+          setItems(tracking.items);
+          setError(null);
+        }
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load milestones');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load release tracking');
       });
     return () => {
       cancelled = true;
     };
   }, [version]);
-
-  useEffect(() => {
-    if (!milestone) return;
-    let cancelled = false;
-    fetchTrackedEnhancements(milestone)
-      .then((data) => {
-        if (!cancelled) {
-          setItems(data);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load tracking issues');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [milestone, version]);
 
   const kepsByNumber = useMemo(() => new Map(data.items.map((k) => [k.number, k])), [data.items]);
   const visible = useMemo(
