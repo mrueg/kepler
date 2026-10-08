@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { QuickJump } from '../components/QuickJump';
 import { CacheFreshnessIndicator } from '../components/CacheFreshnessIndicator';
 import { RateLimitIndicator } from '../components/RateLimitIndicator';
 import './globals.css';
@@ -40,6 +41,7 @@ export default function RootLayout({
                 GEPs
               </Link>
             </nav>
+            <QuickJump />
             <ThemeToggle />
           </header>
           <main className="app-main">{children}</main>
