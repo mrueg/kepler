@@ -1,5 +1,6 @@
 import { load as yamlLoad } from 'js-yaml';
-import type { Gep, GepMetadata } from '../types/gep';
+import type { Gep } from '../types/gep';
+import { normalizeGepMetadata } from '../utils/normalize';
 import { githubFetch } from '../utils/githubFetch';
 import {
   GITHUB_API_BASE,
@@ -18,7 +19,7 @@ import {
 
 const REPO = 'kubernetes-sigs/gateway-api';
 const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/main`;
-export const CACHE_KEY_GEPS = 'kepler_geps_v2';
+export const CACHE_KEY_GEPS = 'kepler_geps_v3';
 export const CACHE_KEY_GEP_TREE = 'kepler_gep_tree_v1';
 const CACHE_KEY_GEP_GIT = 'kepler_gep_git_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
@@ -52,8 +53,8 @@ export async function fetchGepYaml(path: string): Promise<Gep> {
 
   const text = await response.text();
 
-  const metadata = yamlLoad(text) as GepMetadata | null;
-  if (!metadata || typeof metadata.number === 'undefined' || !metadata.name) {
+  const metadata = normalizeGepMetadata(yamlLoad(text));
+  if (!metadata) {
     throw new Error(`Invalid GEP metadata at ${path}`);
   }
   const dirPath = path.replace('/metadata.yaml', '');

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { findKepPath, parseKepPath } from './github';
+import { findKepPath, parseKepPath, titleMentionsKep } from './github';
 import { json, stubFetch } from '../test/fetch';
 
 afterEach(() => {
@@ -35,5 +35,18 @@ describe('findKepPath', () => {
     await expect(findKepPath('9999')).resolves.toBeNull();
     // The second lookup is served from the tree cache.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('titleMentionsKep', () => {
+  it('matches the KEP number as a whole number', () => {
+    expect(titleMentionsKep('KEP-12: graduate to beta', '12')).toBe(true);
+    expect(titleMentionsKep('Update kep 12 for v1.30', '12')).toBe(true);
+    expect(titleMentionsKep('12', '12')).toBe(true);
+  });
+
+  it('does not match longer numbers containing it', () => {
+    expect(titleMentionsKep('KEP-1234: graduate to beta', '12')).toBe(false);
+    expect(titleMentionsKep('KEP-312: graduate to beta', '12')).toBe(false);
   });
 });

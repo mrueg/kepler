@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import type { KepStatus, KepStage } from '../types/kep';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { NONE_SELECTED, checkedItems, toggleSelection } from '../utils/selection';
@@ -69,9 +69,14 @@ export function CheckboxDropdown({
 }: CheckboxDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const firstActionRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   useEffect(() => {
     if (!open) return;
+    // Move focus into the panel so keyboard users land on its controls.
+    firstActionRef.current?.focus();
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
@@ -81,27 +86,44 @@ export function CheckboxDropdown({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (open && e.key === 'Escape') {
+      e.stopPropagation();
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+  }
+
+  function handleBlur(e: React.FocusEvent) {
+    // Close when keyboard focus moves outside the dropdown (e.g. tabbing past it).
+    if (open && e.relatedTarget && !ref.current?.contains(e.relatedTarget as Node)) {
+      setOpen(false);
+    }
+  }
+
   const checked = checkedItems(items, selected);
 
   const isFiltered = selected.length > 0;
   const displayLabel = isFiltered ? `${label} (${checked.length})` : label;
 
   return (
-    <div className="checkbox-dropdown" ref={ref}>
+    <div className="checkbox-dropdown" ref={ref} onKeyDown={handleKeyDown} onBlur={handleBlur}>
       <button
+        ref={buttonRef}
         className={`checkbox-dropdown-btn${isFiltered ? ' checkbox-dropdown-btn--active' : ''}`}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-haspopup="listbox"
+        aria-controls={open ? panelId : undefined}
         type="button"
       >
         {displayLabel}
         <span className="checkbox-dropdown-arrow" aria-hidden="true">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div className="checkbox-dropdown-panel" role="listbox" aria-multiselectable="true">
+        <div className="checkbox-dropdown-panel" id={panelId} role="group" aria-label={`Filter by ${label}`}>
           <div className="checkbox-dropdown-actions">
             <button
+              ref={firstActionRef}
               className="checkbox-dropdown-action-btn"
               onClick={() => onChange([])}
               type="button"

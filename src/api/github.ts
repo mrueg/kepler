@@ -1,5 +1,6 @@
 import { load as yamlLoad } from 'js-yaml';
-import type { Kep, KepMetadata } from '../types/kep';
+import type { Kep } from '../types/kep';
+import { normalizeKepMetadata } from '../utils/normalize';
 import { githubFetch } from '../utils/githubFetch';
 import {
   GITHUB_API_BASE,
@@ -18,7 +19,7 @@ import {
 
 const REPO = 'kubernetes/enhancements';
 const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/master`;
-export const CACHE_KEY_KEPS = 'kepler_keps_v4';
+export const CACHE_KEY_KEPS = 'kepler_keps_v5';
 export const CACHE_KEY_TREE = 'kepler_tree_v2';
 const CACHE_KEY_KEP_GIT = 'kepler_kep_git_v1';
 const CACHE_TTL_TREE = 60 * 60 * 1000; // 1 hour
@@ -57,11 +58,7 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   const text = await yamlResponse.text();
   const readme = readmeText ? readmeText.slice(0, 5000) : undefined;
 
-  const raw = (yamlLoad(text) as Record<string, unknown>) || {};
-  // js-yaml auto-parses YYYY-MM-DD values as Date objects; convert them back to strings
-  const metadata = Object.fromEntries(
-    Object.entries(raw).map(([k, v]) => [k, v instanceof Date ? v.toISOString().split('T')[0] : v]),
-  ) as KepMetadata;
+  const metadata = normalizeKepMetadata(yamlLoad(text));
   const pathInfo = parseKepPath(path)!;
   const dirPath = path.replace('/kep.yaml', '');
 
@@ -75,6 +72,14 @@ export async function fetchKepYaml(path: string): Promise<Kep> {
   };
 }
 
+/**
+ * True when `title` mentions the KEP number as a whole number, so KEP-12
+ * doesn't match a PR titled "KEP-1234: ...".
+ */
+export function titleMentionsKep(title: string, kepNumber: string): boolean {
+  return new RegExp(`(?:^|\\D)${kepNumber}(?:\\D|$)`).test(title);
+}
+
 export async function fetchEnhancementPRs(
   kepNumber: string,
 ): Promise<PRInfo[]> {
@@ -86,11 +91,7 @@ export async function fetchEnhancementPRs(
       items: { number: number; title: string; state: string; html_url: string; pull_request?: { merged_at: string | null }; draft?: boolean; user: { login: string } }[];
     };
 
-    const kepNumberLower = kepNumber.toLowerCase();
-    const prs = searchData.items.filter((item) =>
-      item.title.toLowerCase().includes(kepNumberLower) ||
-      item.title.toLowerCase().includes(`kep-${kepNumberLower}`)
-    );
+    const prs = searchData.items.filter((item) => titleMentionsKep(item.title, kepNumber));
 
     return await Promise.all(
       prs.slice(0, 3).map(async (item): Promise<PRInfo> => {

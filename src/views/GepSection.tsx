@@ -1,15 +1,20 @@
 'use client';
 
 import { useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GepListPage } from './GepListPage';
-import { GepStats } from './StatsPage';
 import { WhatsNew } from '../components/WhatsNew';
 import { TabBar } from '../components/Controls';
 import { useGeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
 import { fetchRecentlyChangedGeps } from '../api/gatewayapi';
 import type { Gep } from '../types/gep';
+
+// The stats tab pulls in Recharts; load it only when the tab is opened.
+const GepStats = dynamic(() => import('./StatsPage').then((m) => m.GepStats), {
+  loading: () => <div className="detail-loading"><div className="spinner" /></div>,
+});
 
 type Tab = 'list' | 'whats-new' | 'stats';
 

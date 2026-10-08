@@ -1,16 +1,21 @@
 'use client';
 
 import { useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { KepListPage } from './KepListPage';
 import { ReleasePage } from './ReleasePage';
-import { KepStats } from './StatsPage';
 import { WhatsNew } from '../components/WhatsNew';
 import { TabBar } from '../components/Controls';
 import { useKeps, type UseProposalsResult } from '../hooks/useProposals';
 import { useRecentChanges } from '../hooks/useRecentChanges';
 import { fetchRecentlyChangedKeps } from '../api/github';
 import type { Kep } from '../types/kep';
+
+// The stats tab pulls in Recharts; load it only when the tab is opened.
+const KepStats = dynamic(() => import('./StatsPage').then((m) => m.KepStats), {
+  loading: () => <div className="detail-loading"><div className="spinner" /></div>,
+});
 
 type Tab = 'list' | 'release' | 'whats-new' | 'stats';
 
