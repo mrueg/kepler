@@ -1,3 +1,5 @@
+import { RateLimitHelp } from './TokenSettings';
+
 interface LoadingBarProps {
   loaded: number;
   total: number;
@@ -39,6 +41,7 @@ export function LoadStatus({ loading, progress, error, reload, noun }: LoadStatu
           <button className="retry-btn" onClick={reload}>
             Retry
           </button>
+          <RateLimitHelp error={error} />
         </div>
       )}
     </>

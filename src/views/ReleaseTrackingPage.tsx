@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import type { UseProposalsResult } from '../hooks/useProposals';
 import { useUrlSync } from '../hooks/useUrlSync';
 import { Badge, StageBadge } from '../components/Badges';
+import { RateLimitHelp } from '../components/TokenSettings';
 import {
   fetchReleaseMilestones,
   fetchTrackedEnhancements,
@@ -164,6 +165,7 @@ export function ReleaseTrackingPage({ data }: { data: UseProposalsResult<Kep> })
           >
             Retry
           </button>
+          <RateLimitHelp error={error} />
         </div>
       )}
 

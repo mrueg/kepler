@@ -1,4 +1,5 @@
 import { updateRateLimit } from './rateLimitStore';
+import { getGitHubToken, markGitHubTokenRejected, shouldSendToken } from './githubToken';
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
@@ -49,6 +50,18 @@ function getRateLimitDelay(response: Response, attempt: number): number {
   return BASE_DELAY_MS * Math.pow(2, attempt);
 }
 
+function withAuthorization(init: RequestInit | undefined, token: string): RequestInit {
+  const headers = new Headers(init?.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  return { ...init, headers };
+}
+
+async function githubFetchUnauthenticated(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+  captureRateLimitHeaders(response, response.status === 429 || response.headers.get('x-ratelimit-remaining') === '0');
+  return response;
+}
+
 /**
  * A drop-in replacement for `fetch` that automatically retries on GitHub
  * rate-limit responses (HTTP 429 and secondary-rate-limit 403).
@@ -58,14 +71,27 @@ function getRateLimitDelay(response: Response, attempt: number): number {
  * to exponential backoff, then retries up to `MAX_RETRIES` times. If the
  * required delay exceeds `MAX_RETRY_DELAY_MS`, the rate-limited response is
  * returned immediately.
+ *
+ * Requests to api.github.com carry the user's GitHub token when one is set.
  */
 export async function githubFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
+  const url = input instanceof Request ? input.url : input.toString();
+  const token = shouldSendToken(url) ? getGitHubToken() : null;
+  const requestInit = token ? withAuthorization(init, token) : init;
+
   let response: Response | undefined;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    response = await fetch(input, init);
+    response = await fetch(input, requestInit);
+
+    if (token && response.status === 401) {
+      // Revoked or expired: tell the user, and retry once without it so the
+      // page still loads within the unauthenticated limit.
+      markGitHubTokenRejected();
+      return githubFetchUnauthenticated(input, init);
+    }
 
     const isRateLimited =
       response.status === 429 ||

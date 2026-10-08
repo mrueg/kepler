@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { githubFetch } from './githubFetch';
 import { stubFetch } from '../test/fetch';
+import { clearGitHubToken, getTokenState, setGitHubToken } from './githubToken';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -38,5 +39,47 @@ describe('githubFetch', () => {
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('githubFetch with a GitHub token', () => {
+  const authOf = (call: unknown[]) => new Headers((call[1] as RequestInit | undefined)?.headers).get('Authorization');
+
+  it('sends the token to api.github.com only', async () => {
+    setGitHubToken('github_pat_secret');
+    try {
+      const fetchMock = stubFetch(() => new Response('ok'));
+      await githubFetch('https://api.github.com/repos/o/r', { headers: { Accept: 'application/json' } });
+      await githubFetch('https://raw.githubusercontent.com/o/r/main/file.md');
+
+      expect(authOf(fetchMock.mock.calls[0])).toBe('Bearer github_pat_secret');
+      expect(new Headers((fetchMock.mock.calls[0][1] as RequestInit).headers).get('Accept')).toBe('application/json');
+      expect(authOf(fetchMock.mock.calls[1])).toBeNull();
+    } finally {
+      clearGitHubToken();
+    }
+  });
+
+  it('sends nothing without a token', async () => {
+    const fetchMock = stubFetch(() => new Response('ok'));
+    await githubFetch('https://api.github.com/repos/o/r');
+    expect(authOf(fetchMock.mock.calls[0])).toBeNull();
+  });
+
+  it('marks a rejected token and retries without it', async () => {
+    setGitHubToken('github_pat_revoked');
+    try {
+      const fetchMock = stubFetch((_url, init) =>
+        new Headers(init?.headers).has('Authorization') ? new Response('bad credentials', { status: 401 }) : new Response('ok'),
+      );
+
+      const response = await githubFetch('https://api.github.com/repos/o/r');
+
+      expect(response.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(getTokenState().rejected).toBe(true);
+    } finally {
+      clearGitHubToken();
+    }
   });
 });
