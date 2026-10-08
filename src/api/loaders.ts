@@ -27,10 +27,12 @@ import {
 import {
   CACHE_KEY_CAEPS,
   CAEP_BRANCH,
+  CAEP_FILE_PATTERN,
   CAEP_REPO,
   compareCaepsByDate,
   fetchAllCaeps,
   fetchCaep,
+  fetchRecentlyChangedCaeps,
   parseCaepPath,
 } from './clusterapi';
 import {
@@ -137,6 +139,12 @@ export const loadRecentKepChanges = recentFirst('recent-keps', () => fetchRecent
   repo: KEP_REPO,
   branch: KEP_BRANCH,
   numberPattern: KEP_FILE_PATTERN,
+});
+export const loadRecentCaepChanges = recentFirst('recent-caeps', () => fetchRecentlyChangedCaeps(), {
+  repo: CAEP_REPO,
+  branch: CAEP_BRANCH,
+  // Captures the CAEP id, which What's New uses in place of a number.
+  numberPattern: CAEP_FILE_PATTERN,
 });
 export const loadRecentGepChanges = recentFirst('recent-geps', () => fetchRecentlyChangedGeps(), {
   repo: GEP_REPO,

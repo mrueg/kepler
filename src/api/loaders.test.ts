@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadKeps, loadRecentKepChanges, loadReleaseTracking } from './loaders';
+import { loadKeps, loadRecentCaepChanges, loadRecentKepChanges, loadReleaseTracking } from './loaders';
 import { loadSnapshot, SNAPSHOT_MAX_AGE_MS } from './snapshot';
 import { CACHE_KEY_KEPS } from './github';
 import { readCache } from './shared';
@@ -183,5 +183,54 @@ describe('snapshot updates', () => {
       ['753', '2026-10-08T11:30:00.000Z'],
       ['1', '2026-10-01T00:00:00.000Z'],
     ]);
+  });
+});
+
+describe('loadRecentCaepChanges', () => {
+  it('serves CAEP ids from the snapshot and adds proposals changed since, including moves to archived/', async () => {
+    const fetchMock = stubFetch((url) => {
+      if (url === '/data/recent-caeps.json') {
+        return json({
+          generatedAt: new Date().toISOString(),
+          commit: 'snap',
+          data: [
+            { number: '20240916-improve-status', date: '2026-10-02T00:00:00.000Z' },
+            { number: '20200506-conditions', date: '2026-09-30T00:00:00.000Z' },
+          ],
+        });
+      }
+      if (url.endsWith('/repos/kubernetes-sigs/cluster-api/compare/snap...main')) {
+        return json({
+          status: 'ahead',
+          total_commits: 1,
+          commits: [{ sha: 'h', commit: { committer: { date: '2026-10-08T09:00:00Z' } } }],
+          files: [
+            { filename: 'docs/proposals/archived/20200506-conditions.md', status: 'renamed', previous_filename: 'docs/proposals/20200506-conditions.md' },
+            { filename: 'docs/proposals/images/diagram.png', status: 'added' },
+            { filename: 'internal/controllers/machine.go', status: 'modified' },
+          ],
+        });
+      }
+      return undefined;
+    });
+
+    const changes = await loadRecentCaepChanges();
+
+    expect(changes.map((c) => [c.number, c.date.toISOString().slice(0, 10)])).toEqual([
+      ['20200506-conditions', '2026-10-08'],
+      ['20240916-improve-status', '2026-10-02'],
+    ]);
+    // No path-filtered commit walk: just the snapshot and one comparison.
+    expect(fetchMock.mock.calls.map(([u]) => String(u)).filter((u) => u.includes('api.github.com'))).toEqual([
+      'https://api.github.com/repos/kubernetes-sigs/cluster-api/compare/snap...main',
+    ]);
+  });
+
+  it('fetches CAEP history live without a snapshot', async () => {
+    const fetchMock = stubFetch((url) =>
+      url.includes('/repos/kubernetes-sigs/cluster-api/commits?path=docs/proposals/') ? json([]) : undefined,
+    );
+    await expect(loadRecentCaepChanges()).resolves.toEqual([]);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('commits?path=docs/proposals/'))).toBe(true);
   });
 });

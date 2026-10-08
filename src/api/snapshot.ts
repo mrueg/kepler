@@ -17,6 +17,7 @@ export type SnapshotName =
   | 'caeps'
   | 'recent-keps'
   | 'recent-geps'
+  | 'recent-caeps'
   | 'release-tracking';
 
 /** Snapshots older than this are ignored in favour of live data. */
