@@ -15,10 +15,10 @@
     "fetch-data": "tsx scripts/fetch-data.ts"
   },
   "dependencies": {
-    "js-yaml": "^5.4.3",
-    "next": "16.4.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "js-yaml": "^5.5.0",
+    "next": "16.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1"
@@ -32,12 +32,12 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "eslint": "^10.12.0",
-    "eslint-config-next": "16.4.0",
-    "jsdom": "^30.1.2",
+    "eslint": "^10.13.0",
+    "eslint-config-next": "16.4.2",
+    "jsdom": "^30.1.3",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.4"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
   }
 }
